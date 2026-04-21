@@ -4,6 +4,7 @@ import { getSessionWithDrills, saveScore, completeSession, getBlock } from '../l
 import ScoreInput from '../components/ScoreInput'
 import DrillInstructions from '../components/DrillInstructions'
 import { ChevronLeft, ChevronDown, ChevronRight } from 'lucide-react'
+import { CategoryBadge } from '../lib/categories'
 
 export default function DrillEntry() {
   const { sessionId, drillId } = useParams()
@@ -130,6 +131,9 @@ export default function DrillEntry() {
       {/* Main content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '24px 20px', gap: 24, maxWidth: 480, width: '100%', margin: '0 auto' }}>
         <div>
+          <div style={{ marginBottom: 6 }}>
+            <CategoryBadge category={drill.category} />
+          </div>
           <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 4 }}>{drill.name}</h1>
           {drill.description && (
             <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.5 }}>{drill.description}</p>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Pencil, X, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
+import { CategoryBadge, CATEGORIES } from '../lib/categories'
 import {
   getDrills, createDrill, updateDrill, deleteDrill,
   getTemplates, createTemplate, updateTemplate, deleteTemplate,
@@ -139,7 +140,7 @@ export default function Drills() {
           <h2 style={{ fontSize: 16, fontWeight: 700 }}>Drill Library</h2>
           <button onClick={() => setDrillForm({
             name: '', description: '', instructions: '',
-            scoring_direction: 'lower_better', min_score: 0, max_score: null, unit: '',
+            scoring_direction: 'lower_better', min_score: 0, max_score: null, unit: '', category: null,
           })} style={addBtn}>
             + New
           </button>
@@ -157,7 +158,10 @@ export default function Drills() {
           {drills.map(d => (
             <div key={d.id} style={card}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>{d.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>{d.name}</span>
+                  <CategoryBadge category={d.category} />
+                </div>
                 <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
                     {d.scoring_direction === 'higher_better' ? <><TrendingUp size={12} /> higher better</> : <><TrendingDown size={12} /> lower better</>}
@@ -226,11 +230,19 @@ function DrillForm({ initial, onSave, onCancel }) {
           <input type="number" value={form.max_score ?? ''} onChange={e => set('max_score', e.target.value)} placeholder="—" style={inputStyle} />
         </Field>
       </div>
+      <Field label="Category">
+        <select value={form.category ?? ''} onChange={e => set('category', e.target.value || null)} style={inputStyle}>
+          <option value="">— none —</option>
+          {CATEGORIES.map(c => (
+            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+          ))}
+        </select>
+      </Field>
       <Field label="Description (optional)">
-        <input value={form.description ?? ''} onChange={e => set('description', e.target.value)} style={inputStyle} />
+        <textarea value={form.description ?? ''} onChange={e => set('description', e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
       </Field>
       <Field label="Instructions (optional)">
-        <textarea value={form.instructions ?? ''} onChange={e => set('instructions', e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+        <textarea value={form.instructions ?? ''} onChange={e => set('instructions', e.target.value)} rows={4} style={{ ...inputStyle, resize: 'vertical' }} />
       </Field>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
