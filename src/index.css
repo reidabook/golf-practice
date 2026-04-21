@@ -22,10 +22,15 @@ body {
   overscroll-behavior: none;
 }
 
+html, body {
+  height: 100%;
+}
+
 #root {
-  min-height: 100svh;
+  height: 100svh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* Safe area for iPhone home indicator */
