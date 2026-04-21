@@ -88,7 +88,8 @@ export default function DrillEntry() {
 
   return (
     <div style={{
-      minHeight: '100svh',
+      flex: 1,
+      minHeight: 0,
       backgroundColor: '#0a0a0a',
       color: '#f8fafc',
       display: 'flex',

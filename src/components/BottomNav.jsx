@@ -13,15 +13,11 @@ export default function BottomNav() {
 
   return (
     <nav style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
       backgroundColor: '#111111',
       borderTop: '1px solid #2a2a2a',
       display: 'flex',
+      flexShrink: 0,
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      zIndex: 50,
     }}>
       {tabs.map(({ to, label, Icon }) => {
         const active = to === '/' ? pathname === '/' : pathname.startsWith(to)
