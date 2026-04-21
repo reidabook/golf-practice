@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getSessionWithDrills, reorderDrills, deleteSession } from '../lib/db'
 import { ArrowLeft, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
+import { CategoryBadge } from '../lib/categories'
 
 export default function SessionOverview() {
   const { sessionId } = useParams()
@@ -99,7 +100,10 @@ export default function SessionOverview() {
               </div>
             )}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{d.drills.name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>{d.drills.name}</span>
+                <CategoryBadge category={d.drills.category} />
+              </div>
               <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                 {d.drills.scoring_direction === 'higher_better'
                   ? <><TrendingUp size={12} /> higher better</>
