@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
+import { Home, History, TrendingUp, Target } from 'lucide-react'
 
 const tabs = [
-  { to: '/',         label: 'Home',     icon: '⛳' },
-  { to: '/history',  label: 'History',  icon: '📋' },
-  { to: '/progress', label: 'Progress', icon: '📈' },
-  { to: '/drills',   label: 'Drills',   icon: '🏌️' },
+  { to: '/',         label: 'Home',     Icon: Home },
+  { to: '/history',  label: 'History',  Icon: History },
+  { to: '/progress', label: 'Progress', Icon: TrendingUp },
+  { to: '/drills',   label: 'Drills',   Icon: Target },
 ]
 
 export default function BottomNav() {
@@ -22,7 +23,7 @@ export default function BottomNav() {
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       zIndex: 50,
     }}>
-      {tabs.map(({ to, label, icon }) => {
+      {tabs.map(({ to, label, Icon }) => {
         const active = to === '/' ? pathname === '/' : pathname.startsWith(to)
         return (
           <Link
@@ -33,7 +34,7 @@ export default function BottomNav() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: 2,
+              gap: 4,
               padding: '10px 4px',
               textDecoration: 'none',
               color: active ? '#4ade80' : '#6b7280',
@@ -42,7 +43,7 @@ export default function BottomNav() {
               transition: 'color 0.15s',
             }}
           >
-            <span style={{ fontSize: 22 }}>{icon}</span>
+            <Icon size={22} strokeWidth={active ? 2.5 : 1.75} />
             <span>{label}</span>
           </Link>
         )

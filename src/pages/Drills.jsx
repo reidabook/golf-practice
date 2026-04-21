@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Pencil, X, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 import {
   getDrills, createDrill, updateDrill, deleteDrill,
   getTemplates, createTemplate, updateTemplate, deleteTemplate,
@@ -76,7 +77,7 @@ export default function Drills() {
       {error && (
         <div style={{ padding: 12, backgroundColor: '#450a0a', borderRadius: 10, color: '#fca5a5', fontSize: 14 }}>
           {error}
-          <button onClick={() => setError(null)} style={{ marginLeft: 8, background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer' }}>✕</button>
+          <button onClick={() => setError(null)} style={{ marginLeft: 8, background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}><X size={14} /></button>
         </div>
       )}
 
@@ -117,9 +118,9 @@ export default function Drills() {
                 <button
                   onClick={() => setTemplateForm({ ...t, drillIds: t.drills?.map(d => d.drill_id) ?? [] })}
                   style={iconBtn}
-                >✏</button>
+                ><Pencil size={14} /></button>
                 {!t.is_default && (
-                  <button onClick={() => handleDeleteTemplate(t.id)} style={{ ...iconBtn, color: '#f87171' }}>✕</button>
+                  <button onClick={() => handleDeleteTemplate(t.id)} style={{ ...iconBtn, color: '#f87171' }}><X size={14} /></button>
                 )}
               </div>
             </div>
@@ -158,7 +159,9 @@ export default function Drills() {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>{d.name}</div>
                 <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
-                  {d.scoring_direction === 'higher_better' ? '↑ higher better' : '↓ lower better'} · {d.unit}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    {d.scoring_direction === 'higher_better' ? <><TrendingUp size={12} /> higher better</> : <><TrendingDown size={12} /> lower better</>}
+                  </span> · {d.unit}
                   {d.max_score !== null ? ` · max ${d.max_score}` : ''}
                   {d.min_score !== 0 ? ` · min ${d.min_score}` : ''}
                 </div>
@@ -167,9 +170,9 @@ export default function Drills() {
                 )}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setDrillForm(d)} style={iconBtn}>✏</button>
+                <button onClick={() => setDrillForm(d)} style={iconBtn}><Pencil size={14} /></button>
                 {!d.is_default && (
-                  <button onClick={() => handleDeleteDrill(d.id)} style={{ ...iconBtn, color: '#f87171' }}>✕</button>
+                  <button onClick={() => handleDeleteDrill(d.id)} style={{ ...iconBtn, color: '#f87171' }}><X size={14} /></button>
                 )}
               </div>
             </div>
@@ -296,9 +299,9 @@ function TemplateForm({ initial, drills, onSave, onCancel }) {
           {selectedDrills.map((d, i) => (
             <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', backgroundColor: '#14532d', borderRadius: 8 }}>
               <span style={{ flex: 1, fontSize: 13, color: '#f8fafc' }}>{i + 1}. {d.name}</span>
-              <button type="button" onClick={() => moveDrill(i, -1)} disabled={i === 0} style={arrowBtn(i === 0)}>▲</button>
-              <button type="button" onClick={() => moveDrill(i, 1)} disabled={i === selectedDrills.length - 1} style={arrowBtn(i === selectedDrills.length - 1)}>▼</button>
-              <button type="button" onClick={() => toggleDrill(d.id)} style={{ ...arrowBtn(false), color: '#f87171' }}>✕</button>
+              <button type="button" onClick={() => moveDrill(i, -1)} disabled={i === 0} style={arrowBtn(i === 0)}><ChevronUp size={12} /></button>
+              <button type="button" onClick={() => moveDrill(i, 1)} disabled={i === selectedDrills.length - 1} style={arrowBtn(i === selectedDrills.length - 1)}><ChevronDown size={12} /></button>
+              <button type="button" onClick={() => toggleDrill(d.id)} style={{ ...arrowBtn(false), color: '#f87171' }}><X size={12} /></button>
             </div>
           ))}
         </div>

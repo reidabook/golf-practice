@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getSessionWithDrills, reorderDrills, deleteSession } from '../lib/db'
+import { ArrowLeft, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 
 export default function SessionOverview() {
   const { sessionId } = useParams()
@@ -62,9 +63,9 @@ export default function SessionOverview() {
       <div>
         <button
           onClick={() => navigate('/')}
-          style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 14, cursor: 'pointer', padding: 0 }}
+          style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 14, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
         >
-          ← Home
+          <ArrowLeft size={16} /> Home
         </button>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 8 }}>
           Session {session.session_number}
@@ -89,18 +90,22 @@ export default function SessionOverview() {
                   onClick={() => moveUp(i)}
                   disabled={i === 0}
                   style={arrowBtn(i === 0)}
-                >▲</button>
+                ><ChevronUp size={14} /></button>
                 <button
                   onClick={() => moveDown(i)}
                   disabled={i === drills.length - 1}
                   style={arrowBtn(i === drills.length - 1)}
-                >▼</button>
+                ><ChevronDown size={14} /></button>
               </div>
             )}
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 600 }}>{d.drills.name}</div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                {d.drills.scoring_direction === 'higher_better' ? '↑ higher better' : '↓ lower better'} · {d.drills.unit}
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                {d.drills.scoring_direction === 'higher_better'
+                  ? <><TrendingUp size={12} /> higher better</>
+                  : <><TrendingDown size={12} /> lower better</>
+                }
+                {' · '}{d.drills.unit}
               </div>
             </div>
             {d.score !== null && (

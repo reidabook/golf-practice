@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function DrillInstructions({ instructions }) {
   const [open, setOpen] = useState(false)
@@ -14,7 +15,7 @@ export default function DrillInstructions({ instructions }) {
         }}
       >
         <span>Instructions</span>
-        <span style={{ fontSize: 12 }}>{open ? '▲' : '▼'}</span>
+        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
       </button>
       {open && (
         <div style={{ padding: '12px 16px', backgroundColor: '#111', fontSize: 14, color: '#d1d5db', lineHeight: 1.6 }}>
