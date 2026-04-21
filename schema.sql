@@ -82,38 +82,38 @@ INSERT INTO drills (name, description, instructions, scoring_direction, max_scor
 VALUES
   (
     '3-Foot Putts',
-    'Build confidence on short putts by tracking misses from 3 feet.',
-    'Set up 10 balls in a circle 3 feet from the hole. Putt each one. Record how many you miss. Aim for 0 misses.',
+    'Make 25 putts in a row from 3 feet. Your score is the number of misses before completing the streak.',
+    'Set up 5 tees, each 1 pace (3 feet) from the hole. Rotate around the tees after each putt until you make 25 putts in a row. If you miss, start over. Your score is the number of missed putts before successfully making 25 straight. A perfect score is 0.',
     'lower_better', NULL, 0, 'misses', true
   ),
   (
     'Drawback Drill',
-    'Sharpen your approach game by measuring how far over par you finish.',
-    'Play 5 approach shots from 100 yards. After each shot, chip/putt out. Record total strokes over par (0 = perfect).',
+    'Play 9 holes on the putting green, par 2 each. Every missed putt gets drawn back one putter length. Score relative to par.',
+    'Play 9 holes on the putting green. Each is a par 2. Each hole should be 7–15 paces from the hole. Every time you miss a putt, you must move the ball 1 putter length away from the hole before attempting the next putt. Since each hole is par 2, par for 9 holes is 18. Your total score is your score relative to par. So if you 3-putt every hole, that''s a 27 or +9 — you''d enter 9.',
     'lower_better', NULL, 0, 'over par', true
   ),
   (
     '5-to-5 Drill',
-    'Lag putting drill — get the ball within 5 feet of the hole from 25 feet.',
-    'From 25 feet, putt 5 balls. Score 5 points for each ball that finishes within 5 feet. Perfect score = 25.',
+    'Chip 25 balls from 25 yards across 5 holes. Score 1 point per ball that stops within 5 feet of the hole.',
+    'Pick a spot to chip 25 yards from a hole. Hit 5 balls. You get 1 point for every ball that stops within 5 feet. Repeat for 5 holes, each 25 yards. Log your total score after 5 holes. Your score is the total number of balls out of 25 that stopped within 5 feet of the hole.',
     'higher_better', 25, 0, 'out of 25', true
   ),
   (
     '75 Yard Wedge',
-    'Precision wedge shots from 75 yards to a target.',
-    'Hit 10 shots from 75 yards. Score each shot: 1 point if within 20 feet, 0 if outside. Record total points out of 10.',
+    'Hit 10 range balls trying to land exactly 75 yards. Score 1 point per ball within 5 yards of the target.',
+    'Hit 10 balls on the range trying to land exactly 75 yards. Your score is the total number of balls that land within 5 yards of your 75-yard target. A perfect score is 10.',
     'higher_better', 10, 0, 'out of 10', true
   ),
   (
     'Irons — Short on Purpose',
-    'Practice hitting irons short of the green to avoid front trouble.',
-    'Hit 10 iron shots aiming to land 10 yards short of the green. Score 1 point each time you achieve this. Record total.',
+    'Hit 10 iron shots at 80% power. Score 1 point per ball that lands cleanly at least 10 yards short of your normal distance.',
+    'Hit 10 balls with your favorite iron. The goal is to land the ball short of what you normally hit that club. Your score is the total number of balls that you hit cleanly AND land at least 10 yards short of what you normally hit that club. Think 80% swings. A perfect score is 10.',
     'higher_better', 10, 0, 'out of 10', true
   ),
   (
     'Safe Side Drill',
-    'Course management drill — always aim to the safe side of the flag.',
-    'Play 5 holes (or simulate). Score +2 for hitting safe side, 0 for neutral, -6 for going wrong side. Max 10, min -30.',
+    'Create a 40-yard fairway on the range with one safe miss side. Fairway = +1, Safe miss = −1, OB miss = −3.',
+    'Create a "Fairway" on your driving range about 40 yards wide. Pick one miss side to be the "safe" side and the other to be "OB". Scoring: Fairway = +1, Safe miss = −1, OB miss = −3. Your score is the sum of all points from your 10 shots. A perfect score is +10.',
     'higher_better', 10, -30, 'points', true
   )
 ON CONFLICT (name) DO NOTHING;
