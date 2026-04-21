@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { getSessionWithDrills, saveScore, completeSession, getBlock } from '../lib/db'
 import ScoreInput from '../components/ScoreInput'
 import DrillInstructions from '../components/DrillInstructions'
+import { ChevronLeft, ChevronDown, ChevronRight } from 'lucide-react'
 
 export default function DrillEntry() {
   const { sessionId, drillId } = useParams()
@@ -96,14 +97,15 @@ export default function DrillEntry() {
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
-        padding: '16px 20px',
+        paddingTop: 'calc(16px + env(safe-area-inset-top, 0px))',
+        paddingBottom: 16, paddingLeft: 20, paddingRight: 20,
         borderBottom: '1px solid #1a1a1a',
       }}>
         <button
           onClick={() => pos > 1 ? handleSave(false) : navigate(`/sessions/${sessionId}`)}
-          style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 20, cursor: 'pointer', padding: '4px 8px 4px 0' }}
+          style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', padding: '4px 8px 4px 0', display: 'flex', alignItems: 'center' }}
         >
-          ←
+          <ChevronLeft size={22} />
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, color: '#6b7280' }}>
@@ -146,7 +148,7 @@ export default function DrillEntry() {
               onClick={() => setShowNotes(o => !o)}
               style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 14, cursor: 'pointer', padding: '0 0 8px' }}
             >
-              {showNotes ? '▼' : '▶'} Session notes (optional)
+              {showNotes ? <ChevronDown size={14} /> : <ChevronRight size={14} />} Session notes (optional)
             </button>
             {showNotes && (
               <textarea
