@@ -140,7 +140,7 @@ export default function Drills() {
           <h2 style={{ fontSize: 16, fontWeight: 700 }}>Drill Library</h2>
           <button onClick={() => setDrillForm({
             name: '', description: '', instructions: '',
-            scoring_direction: 'lower_better', min_score: 0, max_score: null, unit: '', category: null,
+            scoring_direction: 'lower_better', min_score: 0, max_score: null, unit: '', category: null, source: '',
           })} style={addBtn}>
             + New
           </button>
@@ -169,6 +169,9 @@ export default function Drills() {
                   {d.max_score !== null ? ` · max ${d.max_score}` : ''}
                   {d.min_score !== 0 ? ` · min ${d.min_score}` : ''}
                 </div>
+                {d.source && (
+                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 3, fontStyle: 'italic' }}>{d.source}</div>
+                )}
                 {d.description && (
                   <div style={{ fontSize: 12, color: '#4b5563', marginTop: 4 }}>{d.description}</div>
                 )}
@@ -230,6 +233,9 @@ function DrillForm({ initial, onSave, onCancel }) {
           <input type="number" value={form.max_score ?? ''} onChange={e => set('max_score', e.target.value)} placeholder="—" style={inputStyle} />
         </Field>
       </div>
+      <Field label="Source (optional)">
+        <input value={form.source ?? ''} onChange={e => set('source', e.target.value)} style={inputStyle} placeholder="The Scratch Plan" />
+      </Field>
       <Field label="Category">
         <select value={form.category ?? ''} onChange={e => set('category', e.target.value || null)} style={inputStyle}>
           <option value="">— none —</option>

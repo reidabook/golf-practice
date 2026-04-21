@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS drills (
   unit              TEXT NOT NULL,
   is_default        BOOLEAN NOT NULL DEFAULT false,
   category          TEXT CHECK (category IN ('putting', 'chipping', 'approach', 'driving')),
+  source            TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT drills_name_unique UNIQUE (name)
 );
