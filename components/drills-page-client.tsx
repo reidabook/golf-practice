@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Drill, BlockTemplate } from '@/lib/types'
 import { createDrill, updateDrill, deleteDrill } from '@/lib/actions/drills'
 import { createTemplate, updateTemplate, deleteTemplate } from '@/lib/actions/templates'
@@ -38,6 +39,7 @@ interface LogFormState {
 }
 
 export function DrillsPageClient({ drills: initialDrills, templates: initialTemplates }: DrillsPageClientProps) {
+  const router = useRouter()
   const [drills, setDrills] = useState(initialDrills)
   const [templates, setTemplates] = useState(initialTemplates)
   const [drillFormOpen, setDrillFormOpen] = useState(false)
@@ -58,8 +60,7 @@ export function DrillsPageClient({ drills: initialDrills, templates: initialTemp
         } else {
           await createDrill(data)
           toast.success('Drill created')
-          // Reload to get the new ID
-          window.location.reload()
+          router.refresh()
         }
         setDrillFormOpen(false)
         setEditingDrill(null)
@@ -87,11 +88,11 @@ export function DrillsPageClient({ drills: initialDrills, templates: initialTemp
         if (editingTemplate) {
           await updateTemplate(editingTemplate.id, data)
           toast.success('Template updated')
-          window.location.reload()
+          router.refresh()
         } else {
           await createTemplate(data)
           toast.success('Template created')
-          window.location.reload()
+          router.refresh()
         }
         setTemplateFormOpen(false)
         setEditingTemplate(null)
