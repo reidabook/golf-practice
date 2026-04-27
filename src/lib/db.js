@@ -345,11 +345,22 @@ export async function getOutstandingDrills(blockId) {
   const tpl = await getTemplate(block.template_id)
   const allDrillIds = tpl.drills.map(d => d.drill_id || d.id)
 
+  // Fetch completed session IDs for this block first — filtering on related
+  // table columns via .eq('sessions.block_id', ...) is unreliable in Supabase
+  // and can silently return rows from other blocks.
+  const { data: completedSessions } = await supabase
+    .from('sessions')
+    .select('id')
+    .eq('block_id', blockId)
+    .eq('status', 'completed')
+
+  const sessionIds = (completedSessions || []).map(s => s.id)
+  if (sessionIds.length === 0) return allDrillIds
+
   const { data: scored } = await supabase
     .from('session_drills')
-    .select('drill_id, sessions!inner(block_id, status)')
-    .eq('sessions.block_id', blockId)
-    .eq('sessions.status', 'completed')
+    .select('drill_id')
+    .in('session_id', sessionIds)
     .eq('skipped', false)
     .not('score', 'is', null)
 
