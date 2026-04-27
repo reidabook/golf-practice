@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
-import { getSessionWithDrills, saveScore, completeSession, skipDrill, getOutstandingDrills } from '../lib/db'
+import { getSessionWithDrills, saveScore, completeSession, skipDrill } from '../lib/db'
 import ScoreInput from '../components/ScoreInput'
 import DrillInstructions from '../components/DrillInstructions'
 import { ChevronLeft, ChevronDown, ChevronRight } from 'lucide-react'
@@ -53,8 +53,7 @@ export default function DrillEntry() {
       } else if (goNext && pos === total) {
         // Last drill — complete session
         await completeSession(sessionId, notes || null)
-        const outstanding = await getOutstandingDrills(session.block_id)
-        if (outstanding.length === 0) {
+        if (session.session_number >= session.training_blocks.session_count) {
           navigate(`/history/${session.block_id}`)
         } else {
           navigate('/')
@@ -78,8 +77,7 @@ export default function DrillEntry() {
       } else {
         // Last drill — complete session
         await completeSession(sessionId, notes || null)
-        const outstanding = await getOutstandingDrills(session.block_id)
-        if (outstanding.length === 0) {
+        if (session.session_number >= session.training_blocks.session_count) {
           navigate(`/history/${session.block_id}`)
         } else {
           navigate('/')

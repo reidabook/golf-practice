@@ -248,17 +248,8 @@ export async function startNextSession(blockId, template) {
 
   const nextNumber = (lastSession?.session_number ?? 0) + 1
 
-  let drillIds
-  if (nextNumber === 1) {
-    // First session: use all template drills in template order
-    drillIds = tpl.drills.map((d, i) => ({ drill_id: d.drill_id || d.id, sort_order: d.sort_order ?? i }))
-  } else {
-    // Subsequent sessions: only outstanding drills (in original template order)
-    const outstanding = await getOutstandingDrills(blockId)
-    drillIds = tpl.drills
-      .filter(d => outstanding.includes(d.drill_id || d.id))
-      .map((d, i) => ({ drill_id: d.drill_id || d.id, sort_order: i }))
-  }
+  // Every session gets all template drills in template order
+  const drillIds = tpl.drills.map((d, i) => ({ drill_id: d.drill_id || d.id, sort_order: d.sort_order ?? i }))
 
   const { data: session, error: sErr } = await supabase
     .from('sessions')
