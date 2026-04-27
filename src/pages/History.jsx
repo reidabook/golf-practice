@@ -1,13 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getBlocks } from '../lib/db'
+import { getBlocks, getBlockDrillProgress } from '../lib/db'
 
 export default function History() {
   const [blocks, setBlocks] = useState(null)
+  const [drillProgressMap, setDrillProgressMap] = useState({})
   const navigate = useNavigate()
 
   useEffect(() => {
-    getBlocks().then(setBlocks).catch(console.error)
+    getBlocks().then(async (bs) => {
+      setBlocks(bs)
+      const entries = await Promise.all(
+        bs.map(b => getBlockDrillProgress(b.id).then(p => [b.id, p]).catch(() => [b.id, null]))
+      )
+      setDrillProgressMap(Object.fromEntries(entries))
+    }).catch(console.error)
   }, [])
 
   if (!blocks) {
@@ -27,7 +34,7 @@ export default function History() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <h1 style={{ fontSize: 22, fontWeight: 800 }}>History</h1>
       {blocks.map(block => {
-        const completed = block.sessions?.filter(s => s.status === 'completed').length ?? 0
+        const progress = drillProgressMap[block.id]
         const started = new Date(block.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         return (
           <button
@@ -55,7 +62,7 @@ export default function History() {
               </span>
             </div>
             <div style={{ fontSize: 13, color: '#6b7280' }}>
-              {completed} of {block.session_count} sessions · Started {started}
+              {progress ? `${progress.drillsDone} of ${progress.totalDrills} drills` : '…'} · Started {started}
             </div>
             {block.status !== 'active' && block.completed_at && (
               <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>

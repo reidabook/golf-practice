@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getBlock, getBlockCompletionSummary } from '../lib/db'
+import { getBlock, getBlockCompletionSummary, getBlockDrillProgress } from '../lib/db'
 
 export default function BlockDetail() {
   const { blockId } = useParams()
   const [block, setBlock] = useState(null)
   const [summary, setSummary] = useState(null)
+  const [drillProgress, setDrillProgress] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export default function BlockDetail() {
         getBlockCompletionSummary(blockId).then(setSummary).catch(console.error)
       }
     }).catch(console.error)
+    getBlockDrillProgress(blockId).then(setDrillProgress).catch(() => {})
   }, [blockId])
 
   if (!block) {
@@ -29,7 +31,7 @@ export default function BlockDetail() {
         <button onClick={() => navigate('/history')} style={backBtn}>← History</button>
         <h1 style={{ fontSize: 22, fontWeight: 800, marginTop: 8 }}>{block.name}</h1>
         <p style={{ fontSize: 14, color: '#6b7280', marginTop: 2 }}>
-          {completedSessions.length} of {block.session_count} sessions ·{' '}
+          {drillProgress ? `${drillProgress.drillsDone} of ${drillProgress.totalDrills} drills` : `${completedSessions.length} of ${block.session_count} sessions`} ·{' '}
           <span style={{
             color: block.status === 'completed' ? '#4ade80' : '#86efac',
           }}>
