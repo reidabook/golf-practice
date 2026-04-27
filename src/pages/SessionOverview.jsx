@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getSessionWithDrills, reorderDrills, deleteSession, removeSessionDrill, skipDrill, completeSession, getOutstandingDrills } from '../lib/db'
+import { getSessionWithDrills, reorderDrills, deleteSession, removeSessionDrill, skipDrill, completeSession } from '../lib/db'
 import { ArrowLeft, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 import { CategoryBadge } from '../lib/categories'
 
