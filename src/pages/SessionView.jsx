@@ -1,11 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getSessionWithDrills } from '../lib/db'
+import { getSessionWithDrills, saveScore, skipDrill } from '../lib/db'
 
 export default function SessionView() {
   const { blockId, sessionId } = useParams()
   const [session, setSession] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editScore, setEditScore] = useState('')
   const navigate = useNavigate()
+
+  async function handleEditSave(d) {
+    const val = parseFloat(editScore)
+    if (isNaN(val)) return
+    await saveScore(d.id, val)
+    setEditingId(null)
+    getSessionWithDrills(sessionId).then(setSession).catch(console.error)
+  }
+
+  async function handleSkipDrill(d) {
+    await skipDrill(d.id)
+    setEditingId(null)
+    getSessionWithDrills(sessionId).then(setSession).catch(console.error)
+  }
 
   useEffect(() => {
     getSessionWithDrills(sessionId).then(setSession).catch(console.error)
@@ -49,12 +65,34 @@ export default function SessionView() {
                 {d.drills.scoring_direction === 'higher_better' ? '↑ higher better' : '↓ lower better'}
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: 24, fontWeight: 800, color: '#4ade80' }}>
-                {d.score ?? '—'}
-              </span>
-              <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 4 }}>{d.drills.unit}</span>
-            </div>
+            {d.id === editingId ? (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="number"
+                  value={editScore}
+                  onChange={e => setEditScore(e.target.value)}
+                  style={{
+                    width: 70, padding: '6px 10px', borderRadius: 8,
+                    border: '1px solid #374151', backgroundColor: '#111',
+                    color: '#f8fafc', fontSize: 16, textAlign: 'center',
+                  }}
+                />
+                <button onClick={() => handleEditSave(d)} style={{ color: '#4ade80', background: 'none', border: 'none', fontSize: 14, cursor: 'pointer' }}>Save</button>
+                <button onClick={() => handleSkipDrill(d)} style={{ color: '#6b7280', background: 'none', border: 'none', fontSize: 13, cursor: 'pointer' }}>Skip</button>
+                <button onClick={() => setEditingId(null)} style={{ color: '#6b7280', background: 'none', border: 'none', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 24, fontWeight: 800, color: d.skipped ? '#6b7280' : '#4ade80' }}>
+                  {d.skipped ? 'skipped' : (d.score ?? '—')}
+                </span>
+                {!d.skipped && <span style={{ fontSize: 12, color: '#6b7280' }}>{d.drills.unit}</span>}
+                <button
+                  onClick={() => { setEditingId(d.id); setEditScore(d.score ?? '') }}
+                  style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: 13 }}
+                >✎</button>
+              </div>
+            )}
           </div>
         ))}
       </div>

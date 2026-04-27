@@ -46,11 +46,14 @@ export default function Progress() {
         const last = scores[scores.length - 1]
         const improved = higher ? last > first : last < first
 
-        const chartData = entries.map((e, i) => ({
-          index: i + 1,
+        const chartData = entries.map((e) => ({
+          date: e.date
+            ? new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : `#${e.sessionNumber}`,
           score: e.score,
-          label: `${e.blockName} #${e.sessionNumber}`,
-          date: e.date,
+          label: `${e.blockName} · ${e.date
+            ? new Date(e.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : `Session ${e.sessionNumber}`}`,
         }))
 
         return (
@@ -73,7 +76,7 @@ export default function Progress() {
               <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
                 <XAxis
-                  dataKey="index"
+                  dataKey="date"
                   tick={{ fill: '#6b7280', fontSize: 11 }}
                   axisLine={{ stroke: '#2a2a2a' }}
                   tickLine={false}
@@ -89,7 +92,7 @@ export default function Progress() {
                     borderRadius: 8, color: '#f8fafc', fontSize: 12,
                   }}
                   formatter={(val) => [`${val} ${drill.unit}`, drill.name]}
-                  labelFormatter={(i) => chartData[i - 1]?.label ?? ''}
+                  labelFormatter={(val) => chartData.find(d => d.date === val)?.label ?? val}
                 />
                 <ReferenceLine
                   y={best}
