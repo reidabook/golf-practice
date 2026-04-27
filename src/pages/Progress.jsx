@@ -7,10 +7,17 @@ import {
 
 export default function Progress() {
   const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    getProgressForAllDrills().then(setData).catch(console.error)
+    getProgressForAllDrills().then(setData).catch(setError)
   }, [])
+
+  if (error) {
+    return <div style={{ color: '#f87171', paddingTop: 40, textAlign: 'center' }}>
+      Failed to load progress: {error.message}
+    </div>
+  }
 
   if (!data) {
     return <div style={{ color: '#6b7280', paddingTop: 40, textAlign: 'center' }}>Loading…</div>
