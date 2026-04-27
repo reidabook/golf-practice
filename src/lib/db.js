@@ -359,6 +359,39 @@ export async function getOutstandingDrills(blockId) {
   return allDrillIds.filter(id => !doneDrillIds.has(id))
 }
 
+export async function getBlockDrillProgress(blockId) {
+  const { data: block, error } = await supabase
+    .from('training_blocks')
+    .select('template_id, session_count')
+    .eq('id', blockId)
+    .single()
+  if (error) throw error
+
+  const tpl = await getTemplate(block.template_id)
+  const totalDrills = block.session_count * tpl.drills.length
+
+  const { data: completedSessions } = await supabase
+    .from('sessions')
+    .select('id')
+    .eq('block_id', blockId)
+    .eq('status', 'completed')
+
+  const sessionIds = (completedSessions || []).map(s => s.id)
+
+  let drillsDone = 0
+  if (sessionIds.length > 0) {
+    const { count } = await supabase
+      .from('session_drills')
+      .select('id', { count: 'exact', head: true })
+      .in('session_id', sessionIds)
+      .not('score', 'is', null)
+      .eq('skipped', false)
+    drillsDone = count ?? 0
+  }
+
+  return { drillsDone, totalDrills }
+}
+
 // ─── Progress ────────────────────────────────────────────────────────────────
 
 // Returns { drillId: { drill, entries: [{ date, score, blockName, sessionNumber }] } }

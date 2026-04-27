@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getActiveBlock, getTemplates, startBlock, startNextSession, completeBlock, getSessionWithDrills } from '../lib/db'
+import { getActiveBlock, getTemplates, startBlock, startNextSession, completeBlock, getSessionWithDrills, getBlockDrillProgress } from '../lib/db'
 
 export default function Home() {
   const [block, setBlock] = useState(undefined) // undefined = loading
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [drillProgress, setDrillProgress] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     getActiveBlock().then(b => {
       setBlock(b)
+      if (b) getBlockDrillProgress(b.id).then(setDrillProgress).catch(() => {})
     }).catch(e => { setBlock(null); setError(e.message) })
     getTemplates().then(setTemplates).catch(() => {})
   }, [])
@@ -91,10 +93,10 @@ export default function Home() {
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: '#4ade80' }}>
-                {completedSessions.length}
+                {drillProgress?.drillsDone ?? '…'}
               </div>
               <div style={{ fontSize: 12, color: '#6b7280' }}>
-                of {block.session_count} sessions
+                of {drillProgress?.totalDrills ?? '…'} drills
               </div>
             </div>
           </div>
@@ -104,7 +106,7 @@ export default function Home() {
             <div style={{
               height: '100%', borderRadius: 3,
               backgroundColor: '#4ade80',
-              width: `${(completedSessions.length / block.session_count) * 100}%`,
+              width: drillProgress ? `${(drillProgress.drillsDone / drillProgress.totalDrills) * 100}%` : '0%',
               transition: 'width 0.3s ease',
             }} />
           </div>
