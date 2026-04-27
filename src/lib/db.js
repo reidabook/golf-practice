@@ -216,7 +216,7 @@ export async function getSessionWithDrills(id) {
 
   const { data: drills, error: dErr } = await supabase
     .from('session_drills')
-    .select('*, drills(*)')
+    .select('*, drills(*), skipped')
     .eq('session_id', id)
     .order('sort_order')
   if (dErr) throw dErr
@@ -248,6 +248,18 @@ export async function startNextSession(blockId, template) {
 
   const nextNumber = (lastSession?.session_number ?? 0) + 1
 
+  let drillIds
+  if (nextNumber === 1) {
+    // First session: use all template drills in template order
+    drillIds = tpl.drills.map((d, i) => ({ drill_id: d.drill_id || d.id, sort_order: d.sort_order ?? i }))
+  } else {
+    // Subsequent sessions: only outstanding drills (in original template order)
+    const outstanding = await getOutstandingDrills(blockId)
+    drillIds = tpl.drills
+      .filter(d => outstanding.includes(d.drill_id || d.id))
+      .map((d, i) => ({ drill_id: d.drill_id || d.id, sort_order: i }))
+  }
+
   const { data: session, error: sErr } = await supabase
     .from('sessions')
     .insert({ block_id: blockId, session_number: nextNumber })
@@ -255,13 +267,15 @@ export async function startNextSession(blockId, template) {
     .single()
   if (sErr) throw sErr
 
-  const drillRows = tpl.drills.map(d => ({
-    session_id: session.id,
-    drill_id: d.drill_id || d.id,
-    sort_order: d.sort_order,
-  }))
-  const { error: dErr } = await supabase.from('session_drills').insert(drillRows)
-  if (dErr) throw dErr
+  if (drillIds.length > 0) {
+    const drillRows = drillIds.map(d => ({
+      session_id: session.id,
+      drill_id: d.drill_id,
+      sort_order: d.sort_order,
+    }))
+    const { error: dErr } = await supabase.from('session_drills').insert(drillRows)
+    if (dErr) throw dErr
+  }
 
   return session.id
 }
@@ -299,9 +313,48 @@ export async function deleteSession(id) {
 export async function saveScore(sessionDrillId, score) {
   const { error } = await supabase
     .from('session_drills')
-    .update({ score })
+    .update({ score, skipped: false })
     .eq('id', sessionDrillId)
   if (error) throw error
+}
+
+export async function skipDrill(sessionDrillId) {
+  const { error } = await supabase
+    .from('session_drills')
+    .update({ skipped: true, score: null })
+    .eq('id', sessionDrillId)
+  if (error) throw error
+}
+
+export async function removeSessionDrill(sessionDrillId) {
+  const { error } = await supabase
+    .from('session_drills')
+    .delete()
+    .eq('id', sessionDrillId)
+  if (error) throw error
+}
+
+// Returns drill_ids not yet scored (not skipped) in the block
+export async function getOutstandingDrills(blockId) {
+  const { data: block } = await supabase
+    .from('training_blocks')
+    .select('template_id')
+    .eq('id', blockId)
+    .single()
+
+  const tpl = await getTemplate(block.template_id)
+  const allDrillIds = tpl.drills.map(d => d.drill_id || d.id)
+
+  const { data: scored } = await supabase
+    .from('session_drills')
+    .select('drill_id, sessions!inner(block_id, status)')
+    .eq('sessions.block_id', blockId)
+    .eq('sessions.status', 'completed')
+    .eq('skipped', false)
+    .not('score', 'is', null)
+
+  const doneDrillIds = new Set((scored || []).map(r => r.drill_id))
+  return allDrillIds.filter(id => !doneDrillIds.has(id))
 }
 
 // ─── Progress ────────────────────────────────────────────────────────────────
@@ -312,6 +365,7 @@ export async function getProgressForAllDrills() {
     .from('session_drills')
     .select(`
       score,
+      skipped,
       sort_order,
       drills(*),
       sessions!inner(
@@ -323,6 +377,7 @@ export async function getProgressForAllDrills() {
     `)
     .eq('sessions.status', 'completed')
     .not('score', 'is', null)
+    .eq('skipped', false)
   if (error) throw error
 
   const map = {}

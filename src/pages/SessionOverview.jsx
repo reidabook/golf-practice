@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getSessionWithDrills, reorderDrills, deleteSession } from '../lib/db'
+import { getSessionWithDrills, reorderDrills, deleteSession, removeSessionDrill, skipDrill, completeSession, getOutstandingDrills } from '../lib/db'
 import { ArrowLeft, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 import { CategoryBadge } from '../lib/categories'
 
@@ -9,6 +9,7 @@ export default function SessionOverview() {
   const [session, setSession] = useState(null)
   const [drills, setDrills] = useState([])
   const [deleting, setDeleting] = useState(false)
+  const [finishing, setFinishing] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -43,6 +44,26 @@ export default function SessionOverview() {
     } catch (e) {
       alert(e.message)
       setDeleting(false)
+    }
+  }
+
+  async function handleRemoveDrill(d) {
+    await removeSessionDrill(d.id)
+    setDrills(prev => prev.filter(x => x.id !== d.id))
+  }
+
+  async function handleFinishEarly() {
+    if (!window.confirm('Finish session now? Unscored drills will be skipped.')) return
+    setFinishing(true)
+    try {
+      const unscored = drills.filter(d => d.score === null && !d.skipped)
+      for (const d of unscored) await skipDrill(d.id)
+      await completeSession(session.id, null)
+      navigate('/')
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setFinishing(false)
     }
   }
 
@@ -115,6 +136,16 @@ export default function SessionOverview() {
             {d.score !== null && (
               <span style={{ fontSize: 20, fontWeight: 700, color: '#4ade80' }}>{d.score}</span>
             )}
+            {d.skipped && (
+              <span style={{ fontSize: 13, color: '#6b7280' }}>skipped</span>
+            )}
+            {isInProgress && !anyScored && (
+              <button
+                onClick={() => handleRemoveDrill(d)}
+                style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}
+                title="Remove from this session"
+              >×</button>
+            )}
           </div>
         ))}
       </div>
@@ -124,6 +155,11 @@ export default function SessionOverview() {
           <button onClick={handleBegin} style={primaryBtn}>
             {anyScored ? 'Continue Session' : 'Begin Session'}
           </button>
+          {anyScored && (
+            <button onClick={handleFinishEarly} disabled={finishing} style={secondaryBtn}>
+              {finishing ? 'Finishing…' : 'Finish Session Early'}
+            </button>
+          )}
           <button
             onClick={handleDelete}
             disabled={deleting}

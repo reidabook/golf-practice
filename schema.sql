@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS session_drills (
   session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   drill_id   UUID NOT NULL REFERENCES drills(id) ON DELETE RESTRICT,
   score      NUMERIC,
+  skipped    BOOLEAN NOT NULL DEFAULT FALSE,
   sort_order INTEGER NOT NULL DEFAULT 0,
   UNIQUE (session_id, drill_id)
 );

@@ -1,16 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getActiveBlock, getTemplates, startBlock, startNextSession, completeBlock, getSessionWithDrills } from '../lib/db'
+import { getActiveBlock, getTemplates, getTemplate, startBlock, startNextSession, completeBlock, getSessionWithDrills, getOutstandingDrills } from '../lib/db'
 
 export default function Home() {
   const [block, setBlock] = useState(undefined) // undefined = loading
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [outstandingDrillIds, setOutstandingDrillIds] = useState(null)
+  const [totalDrillCount, setTotalDrillCount] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
-    getActiveBlock().then(setBlock).catch(e => { setBlock(null); setError(e.message) })
+    getActiveBlock().then(b => {
+      setBlock(b)
+      if (b) {
+        getOutstandingDrills(b.id).then(setOutstandingDrillIds).catch(() => {})
+        getTemplate(b.template_id).then(tpl => setTotalDrillCount(tpl.drills?.length ?? 0)).catch(() => {})
+      }
+    }).catch(e => { setBlock(null); setError(e.message) })
     getTemplates().then(setTemplates).catch(() => {})
   }, [])
 
@@ -62,8 +70,10 @@ export default function Home() {
 
   const completedSessions = block?.sessions?.filter(s => s.status === 'completed') ?? []
   const inProgressSession = block?.sessions?.find(s => s.status === 'in_progress')
-  const nextSessionNum = completedSessions.length + 1
-  const allDone = block && nextSessionNum > block.session_count && !inProgressSession
+  const drillsDone = (totalDrillCount !== null && outstandingDrillIds !== null)
+    ? totalDrillCount - outstandingDrillIds.length
+    : null
+  const allDone = outstandingDrillIds !== null && outstandingDrillIds.length === 0 && !inProgressSession
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -89,8 +99,12 @@ export default function Home() {
               <div style={{ fontSize: 20, fontWeight: 700 }}>{block.name}</div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#4ade80' }}>{completedSessions.length}</div>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>of {block.session_count}</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#4ade80' }}>
+                {drillsDone !== null ? drillsDone : completedSessions.length}
+              </div>
+              <div style={{ fontSize: 12, color: '#6b7280' }}>
+                {totalDrillCount !== null ? `of ${totalDrillCount} drills` : `of ${block.session_count} sessions`}
+              </div>
             </div>
           </div>
 
@@ -99,7 +113,7 @@ export default function Home() {
             <div style={{
               height: '100%', borderRadius: 3,
               backgroundColor: '#4ade80',
-              width: `${(completedSessions.length / block.session_count) * 100}%`,
+              width: `${totalDrillCount ? (drillsDone / totalDrillCount) * 100 : (completedSessions.length / block.session_count) * 100}%`,
               transition: 'width 0.3s ease',
             }} />
           </div>
@@ -115,7 +129,7 @@ export default function Home() {
           ) : allDone ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ fontSize: 14, color: '#4ade80', textAlign: 'center', marginBottom: 4 }}>
-                All {block.session_count} sessions complete! 🎉
+                All {totalDrillCount ?? block.session_count} drills complete! 🎉
               </p>
               <button onClick={handleCompleteBlock} disabled={loading} style={primaryBtn}>
                 Complete Block & See Summary
@@ -123,7 +137,7 @@ export default function Home() {
             </div>
           ) : (
             <button onClick={handleStartSession} disabled={loading} style={primaryBtn}>
-              {loading ? 'Starting…' : `Start Session ${nextSessionNum}`}
+              {loading ? 'Starting…' : 'Start Next Session'}
             </button>
           )}
         </div>

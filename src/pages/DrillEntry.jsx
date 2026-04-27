@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
-import { getSessionWithDrills, saveScore, completeSession, getBlock } from '../lib/db'
+import { getSessionWithDrills, saveScore, completeSession, skipDrill, getOutstandingDrills } from '../lib/db'
 import ScoreInput from '../components/ScoreInput'
 import DrillInstructions from '../components/DrillInstructions'
 import { ChevronLeft, ChevronDown, ChevronRight } from 'lucide-react'
@@ -53,18 +53,37 @@ export default function DrillEntry() {
       } else if (goNext && pos === total) {
         // Last drill — complete session
         await completeSession(sessionId, notes || null)
-
-        // Check if block is done
-        const block = session.training_blocks
-        if (block) {
-          const fullBlock = await getBlock(session.block_id)
-          const completedCount = fullBlock.sessions.filter(s => s.status === 'completed').length
-          if (completedCount >= fullBlock.session_count) {
-            navigate(`/history/${session.block_id}`)
-            return
-          }
+        const outstanding = await getOutstandingDrills(session.block_id)
+        if (outstanding.length === 0) {
+          navigate(`/history/${session.block_id}`)
+        } else {
+          navigate('/')
         }
-        navigate('/')
+      }
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleSkip() {
+    if (!currentDrill) return
+    setSaving(true)
+    try {
+      await skipDrill(currentDrill.id)
+      if (pos < total) {
+        const nextDrill = session.drills[pos]
+        navigate(`/sessions/${sessionId}/drill/${nextDrill.drill_id}?pos=${pos + 1}&total=${total}`)
+      } else {
+        // Last drill — complete session
+        await completeSession(sessionId, notes || null)
+        const outstanding = await getOutstandingDrills(session.block_id)
+        if (outstanding.length === 0) {
+          navigate(`/history/${session.block_id}`)
+        } else {
+          navigate('/')
+        }
       }
     } catch (e) {
       alert(e.message)
@@ -191,6 +210,17 @@ export default function DrillEntry() {
           }}
         >
           {saving ? 'Saving…' : isLast ? 'Finish Session' : 'Save & Next →'}
+        </button>
+        <button
+          onClick={handleSkip}
+          disabled={saving}
+          style={{
+            width: '100%', marginTop: 10, padding: 14, borderRadius: 14, border: 'none',
+            backgroundColor: 'transparent', color: '#6b7280',
+            fontSize: 15, fontWeight: 500, cursor: 'pointer',
+          }}
+        >
+          Skip this drill
         </button>
       </div>
     </div>
