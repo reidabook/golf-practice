@@ -323,7 +323,6 @@ export async function getProgressForAllDrills() {
     `)
     .eq('sessions.status', 'completed')
     .not('score', 'is', null)
-    .order('sessions.session_date', { ascending: true })
   if (error) throw error
 
   const map = {}
@@ -337,6 +336,12 @@ export async function getProgressForAllDrills() {
       sessionNumber: row.sessions.session_number,
     })
   }
+
+  // Sort entries chronologically by session number
+  for (const id of Object.keys(map)) {
+    map[id].entries.sort((a, b) => a.sessionNumber - b.sessionNumber)
+  }
+
   return map
 }
 
