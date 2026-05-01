@@ -5,109 +5,128 @@ Add to iPhone home screen via Safari → Share → Add to Home Screen.
 
 ## Stack
 
-- **Vite + React** (JSX, no TypeScript)
-- **Supabase** (Postgres + JS SDK v2)
-- **Tailwind CSS v4** (via `@tailwindcss/vite`)
-- **React Router v7** (SPA routing)
-- **Recharts** (progress charts)
-- **vite-plugin-pwa** (PWA manifest + service worker)
+- **Next.js 15** (App Router, server components + server actions)
+- **TypeScript**
+- **Tailwind CSS v3** (PostCSS plugin)
+- **shadcn/ui** (Radix-based component library)
+- **Recharts** (progress charts, client-side only via dynamic import)
+- **postgres.js** (direct PostgreSQL connection to Supabase)
+- **Supabase** (hosted PostgreSQL — accessed via `DATABASE_URL`, not the JS SDK)
+
+## Deployment
+
+**Deployed on Vercel** — pushes to `main` on GitHub trigger automatic deploys.
+
+Repository: `https://github.com/reidabook/golf-practice`
+
+> **Important:** `npmjs.org` is blocked on UKG networks (Zscaler). Do not run `npm install`
+> locally on a UKG connection. Dependencies install automatically during Vercel builds.
+> For local dev, use a personal network or phone hotspot.
+
+## Environment Variables
+
+Set in Vercel dashboard → Settings → Environment Variables:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | `postgresql://postgres:<password>@db.<project>.supabase.co:5432/postgres` |
+
+The `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` vars in `.env.local` are legacy —
+the app no longer uses the Supabase JS SDK.
+
+## Data Model (Day-Based)
+
+Sessions are **not** a concept. Each day drills are logged counts as a day of practice.
+
+| Table | Purpose |
+|---|---|
+| `drills` | Drill definitions (name, unit, scoring_direction) |
+| `block_templates` + `block_template_drills` | Reusable block configs with ordered drill lists |
+| `training_blocks` | Active or completed practice blocks (ref to template) |
+| `drill_logs` | One row per drill scored, keyed to `block_id`, `drill_id`, `log_date` |
+
+`sessions` and `session_drills` tables still exist in Supabase but are unused.
 
 ## File Index
 
 ### Config
 | File | Purpose |
 |---|---|
-| `package.json` | Dependencies |
-| `vite.config.js` | Vite + PWA + Tailwind plugins |
-| `vercel.json` | SPA rewrite for Vercel |
-| `.env.local.example` | Env var template |
-| `schema.sql` | Supabase Postgres DDL + seed + RLS policies |
+| `package.json` | Dependencies (Next.js, postgres, recharts, shadcn/ui, Tailwind) |
+| `next.config.ts` | Next.js config |
+| `tailwind.config.ts` | Tailwind theme |
+| `postcss.config.js` | PostCSS (required for Tailwind v3 + Next.js) |
+| `tsconfig.json` | TypeScript config |
+| `vercel.json` | Declares Next.js framework for Vercel |
+| `schema.sql` | Supabase Postgres DDL (may be out of date — see Applied Migrations below) |
+| `.env.local` | Local env vars (DATABASE_URL) — not committed |
 
-### Source (`src/`)
-| File | Purpose |
-|---|---|
-| `src/main.jsx` | Entry point — BrowserRouter + StrictMode |
-| `src/App.jsx` | Route definitions |
-| `src/index.css` | Tailwind v4 + theme tokens + body styles |
-| `src/lib/supabase.js` | Supabase client singleton |
-| `src/lib/db.js` | All database queries and mutations |
-
-### Pages (`src/pages/`)
-| File | Route | Purpose |
+### App (`app/`)
+| File | Route | Notes |
 |---|---|---|
-| `Home.jsx` | `/` | Dashboard: active block, CTA, last session scores |
-| `History.jsx` | `/history` | All blocks list |
-| `BlockDetail.jsx` | `/history/:blockId` | Block detail + completion summary |
-| `SessionView.jsx` | `/history/:blockId/sessions/:sessionId` | Read-only completed session |
-| `SessionOverview.jsx` | `/sessions/:sessionId` | Drill list, reorder, Begin Session |
-| `DrillEntry.jsx` | `/sessions/:sessionId/drill/:drillId` | Full-screen score wizard |
-| `Progress.jsx` | `/progress` | All-time charts per drill |
-| `Drills.jsx` | `/drills` | Block Templates + Drill Library CRUD |
+| `app/layout.tsx` | all routes | Root layout, bottom nav, Toaster |
+| `app/page.tsx` | `/` | Home: active block, start/continue day |
+| `app/loading.tsx` | all routes | Global suspense fallback |
+| `app/error.tsx` | all routes | Global error boundary |
+| `app/history/page.tsx` | `/history` | All blocks list |
+| `app/history/[blockId]/page.tsx` | `/history/:blockId` | Block detail + drill progress |
+| `app/history/[blockId]/not-found.tsx` | 404 for bad blockId | |
+| `app/blocks/[blockId]/drills/page.tsx` | `/blocks/:blockId/drills` | Drill scoring wizard (today's session) |
+| `app/blocks/[blockId]/drills/[drillId]/page.tsx` | `/blocks/:blockId/drills/:drillId` | Single drill scoring screen |
+| `app/progress/page.tsx` | `/progress` | All-time charts per drill |
+| `app/drills/page.tsx` | `/drills` | Block templates + drill library CRUD |
 
-### Components (`src/components/`)
+### Lib
 | File | Purpose |
 |---|---|
-| `Layout.jsx` | Page wrapper with bottom nav padding |
-| `BottomNav.jsx` | Fixed 4-tab bottom navigation (Home/History/Progress/Drills) |
-| `ScoreInput.jsx` | Stepper ±1 + tap score → numpad overlay |
-| `Numpad.jsx` | Custom 0-9 numpad overlay |
-| `DrillInstructions.jsx` | Collapsible drill instructions |
+| `lib/db.ts` | postgres.js singleton (uses `DATABASE_URL`) |
+| `lib/types.ts` | Shared TypeScript types |
+| `lib/utils.ts` | `cn()` class merging utility |
+| `lib/queries/blocks.ts` | Read queries: active block, block list, block detail |
+| `lib/queries/drill-logs.ts` | Read queries: today's logs, drill comparison |
+| `lib/queries/drills.ts` | Read queries: drill library |
+| `lib/queries/progress.ts` | Read queries: all-drill progress for charts |
+| `lib/queries/templates.ts` | Read queries: block templates |
+| `lib/actions/blocks.ts` | Server actions: start block, complete block |
+| `lib/actions/drill-logs.ts` | Server actions: saveDrillLog, skipDrillLog, logDrillScore |
+| `lib/actions/drills.ts` | Server actions: createDrill, updateDrill, deleteDrill |
+| `lib/actions/templates.ts` | Server actions: createTemplate, updateTemplate, deleteTemplate |
 
-### Public (`public/`)
+### Components
 | File | Purpose |
 |---|---|
-| `icon-192.png` | App icon 192×192 (placeholder from bocce — replace with real golf icon) |
-| `icon-512.png` | App icon 512×512 (placeholder from bocce — replace with real golf icon) |
+| `components/nav/bottom-nav.tsx` | Fixed 4-tab bottom nav (Home/History/Progress/Drills) |
+| `components/drill-scoring-client.tsx` | Client component for the drill scoring wizard |
+| `components/block-drill-list-client.tsx` | Client component for block drill list |
+| `components/block-completion-summary.tsx` | Summary shown on block completion |
+| `components/drill-comparison-overlay.tsx` | After scoring: comparison vs previous attempts |
+| `components/progress-chart.tsx` | Recharts line chart (client-only, lazy-loaded) |
+| `components/progress-chart-client.tsx` | `'use client'` wrapper with dynamic import + Skeleton |
+| `components/drill-form.tsx` | Create/edit drill modal |
+| `components/template-form.tsx` | Create/edit block template modal |
+| `components/drills-page-client.tsx` | Full client component for /drills page |
+| `components/drill-instructions.tsx` | Collapsible drill instructions |
+| `components/score-input.tsx` | Stepper ±1 + numpad overlay |
+| `components/numpad.tsx` | Custom 0-9 numpad |
+| `components/sw-register.tsx` | PWA service worker registration |
+| `components/ui/` | shadcn/ui primitives (button, card, badge, etc.) |
 
 ---
 
-## Setup
+## Applied Migrations (Supabase)
 
-### Prerequisites
-- Node.js 20+
-- Supabase project (free tier works)
+In order applied:
 
-### 1. Install dependencies
-
-> Note: npmjs.org is blocked on UKG networks (Zscaler). Run this on a personal network or phone hotspot.
-
-```bash
-npm install
-```
-
-### 2. Create Supabase project
-
-1. Go to [supabase.com](https://supabase.com) → New project
-2. In the SQL editor, paste and run `schema.sql` (includes DDL + seed + RLS policies)
-3. Go to Project Settings → API → copy **Project URL** and **anon public** key
-
-### 3. Configure environment
-
-```bash
-cp .env.local.example .env.local
-# Edit .env.local and fill in your Supabase URL and anon key
-```
-
-### 4. Dev server
-
-```bash
-npm run dev
-```
-
-### 5. Deploy to Vercel
-
-```bash
-npx vercel deploy --prod
-# Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel dashboard → Settings → Environment Variables
-```
+1. Initial schema — `drills`, `block_templates`, `block_template_drills`, `training_blocks`, `sessions`, `session_drills`
+2. `ALTER TABLE session_drills ADD COLUMN skipped BOOLEAN NOT NULL DEFAULT FALSE;`
+3. `ALTER TABLE drills ADD COLUMN source TEXT;`
+4. Day-based model migration — added `drill_logs` table; renamed `session_count → target_days` on `block_templates` and `training_blocks`
 
 ---
 
 ## Pending Actions
-- [x] Placeholder icon files added to `public/` (bocce icons — functional for PWA install)
+
 - [ ] Replace `public/icon-192.png` and `public/icon-512.png` with real golf icons
-- [ ] Create Supabase project and run `schema.sql` in the SQL editor
-- [ ] Copy `.env.local.example` to `.env.local` and fill in Supabase credentials
-- [ ] Connect to a non-UKG network and run `npm install` (npmjs.org blocked by Zscaler)
-- [ ] Run `npm run dev` to test locally
-- [ ] Deploy to Vercel: `npx vercel deploy --prod` (set env vars in Vercel dashboard)
+- [ ] Reset Supabase database password (was shared in plain text during setup)
+- [ ] Drop unused `sessions` and `session_drills` tables from Supabase once stable
+- [ ] Update `schema.sql` to reflect current table structure
