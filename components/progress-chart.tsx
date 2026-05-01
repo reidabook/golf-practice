@@ -17,8 +17,22 @@ interface ProgressChartProps {
   progress: DrillProgress
 }
 
+function linearRegression(scores: number[]): { slope: number; intercept: number } | null {
+  const n = scores.length
+  if (n < 2) return null
+  const sumX = (n * (n - 1)) / 2
+  const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6
+  const sumY = scores.reduce((a, b) => a + b, 0)
+  const sumXY = scores.reduce((acc, y, i) => acc + i * y, 0)
+  const denom = n * sumX2 - sumX * sumX
+  if (denom === 0) return null
+  const slope = (n * sumXY - sumX * sumY) / denom
+  const intercept = (sumY - slope * sumX) / n
+  return { slope, intercept }
+}
+
 export function ProgressChart({ progress }: ProgressChartProps) {
-  const { drill, dataPoints, personalBest, blockBoundaries } = progress
+  const { drill, dataPoints, blockBoundaries } = progress
 
   if (dataPoints.length < 1) {
     return (
@@ -30,11 +44,14 @@ export function ProgressChart({ progress }: ProgressChartProps) {
     )
   }
 
-  const chartData = dataPoints.map((dp) => {
+  const regression = linearRegression(dataPoints.map((dp) => dp.score))
+
+  const chartData = dataPoints.map((dp, i) => {
     const [, month, day] = dp.date.split('-')
     return {
       name: `${parseInt(month)}/${parseInt(day)}`,
       score: dp.score,
+      trend: regression ? Math.round((regression.slope * i + regression.intercept) * 10) / 10 : undefined,
       date: dp.date,
       blockName: dp.blockName,
       source: dp.source,
@@ -91,7 +108,10 @@ export function ProgressChart({ progress }: ProgressChartProps) {
                 borderRadius: '0.5rem',
                 fontSize: 12,
               }}
-              formatter={(val: number) => [`${val} ${drill.unit}`, 'Score']}
+              formatter={(val: number, key: string) => {
+                if (key === 'trend') return []
+                return [`${val} ${drill.unit}`, 'Score']
+              }}
               labelFormatter={(label, payload) => {
                 const item = payload?.[0]?.payload
                 return item ? item.fullLabel : label
@@ -109,13 +129,18 @@ export function ProgressChart({ progress }: ProgressChartProps) {
               />
             ))}
 
-            {/* Personal best line */}
-            {personalBest !== null && (
-              <ReferenceLine
-                y={personalBest}
+            {/* Trend line (linear regression) */}
+            {regression && (
+              <Line
+                type="linear"
+                dataKey="trend"
                 stroke="hsl(142 71% 45%)"
+                strokeWidth={1.5}
                 strokeDasharray="6 3"
                 strokeOpacity={0.6}
+                dot={false}
+                activeDot={false}
+                legendType="none"
               />
             )}
 
