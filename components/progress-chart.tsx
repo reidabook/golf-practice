@@ -110,7 +110,7 @@ export function ProgressChart({ progress }: ProgressChartProps) {
               }}
               formatter={(val: number, key: string) => {
                 if (key === 'trend') return []
-                return [`${val} ${drill.unit}`, 'Score']
+                return [`${val} ${drill.unit}`, 'Score' as string]
               }}
               labelFormatter={(label, payload) => {
                 const item = payload?.[0]?.payload
