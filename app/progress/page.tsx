@@ -1,14 +1,5 @@
 import { getProgressForAllDrills } from '@/lib/queries/progress'
-import dynamic from 'next/dynamic'
-import { Skeleton } from '@/components/ui/skeleton'
-
-const ProgressChart = dynamic(
-  () => import('@/components/progress-chart').then((m) => m.ProgressChart),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-48 w-full" />,
-  }
-)
+import { ProgressChartClient } from '@/components/progress-chart-client'
 
 export default async function ProgressPage() {
   const drillProgress = await getProgressForAllDrills()
@@ -38,7 +29,7 @@ export default async function ProgressPage() {
               • {dp.drill.unit}
             </p>
           </div>
-          <ProgressChart progress={dp} />
+          <ProgressChartClient progress={dp} />
         </div>
       ))}
     </div>
