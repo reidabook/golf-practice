@@ -4,157 +4,146 @@ Use this file to answer "what do I need to touch if X changes?" before starting 
 
 ---
 
+## Rendering Model
+
+Next.js App Router. Default is server components (async, fetch data, no state).
+Client components (`'use client'`) are used only for interactivity (forms, state, effects).
+
+All DB writes go through **server actions** (`lib/actions/`).
+All DB reads go through **query functions** (`lib/queries/`) called from server components.
+
+---
+
 ## Routes
 
-| Path | Component | Notes |
+| Path | File | Notes |
 |---|---|---|
-| `/` | `Home.jsx` | Active block, start/resume session, template picker |
-| `/history` | `History.jsx` | All blocks list |
-| `/history/:blockId` | `BlockDetail.jsx` | Block summary + session list |
-| `/history/:blockId/sessions/:sessionId` | `SessionView.jsx` | Read-only completed session view with inline edit |
-| `/sessions/:sessionId` | `SessionOverview.jsx` | Pre/mid-session drill list, reorder, begin/finish |
-| `/sessions/:sessionId/drill/:drillId` | `DrillEntry.jsx` | Full-screen drill scoring (no Layout wrapper) |
-| `/progress` | `Progress.jsx` | Recharts line chart per drill |
-| `/drills` | `Drills.jsx` | Drill + template CRUD |
+| `/` | `app/page.tsx` | Active block card, start/continue day CTA |
+| `/history` | `app/history/page.tsx` | All blocks list with drill progress |
+| `/history/:blockId` | `app/history/[blockId]/page.tsx` | Block detail + per-drill progress |
+| `/blocks/:blockId/drills` | `app/blocks/[blockId]/drills/page.tsx` | Drill scoring wizard for today |
+| `/blocks/:blockId/drills/:drillId` | `app/blocks/[blockId]/drills/[drillId]/page.tsx` | Single drill full-screen scorer |
+| `/progress` | `app/progress/page.tsx` | All-time line charts per drill |
+| `/drills` | `app/drills/page.tsx` | Block templates + drill library CRUD |
 
 ---
 
 ## Database Tables → Files That Touch Them
 
 ### `drills`
-Columns: `id, name, unit, scoring_direction, category, description, source`
+Columns: `id, name, unit, scoring_direction, category, description, source, is_default`
 
 | Operation | File |
 |---|---|
-| Read all | `db.js → getDrills()` ← `Drills.jsx` |
-| Read one | `db.js → getDrill(id)` ← `Drills.jsx` |
-| Create / Update / Delete | `db.js → createDrill / updateDrill / deleteDrill` ← `Drills.jsx` |
-| Read via join | `session_drills` joins → `SessionOverview`, `SessionView`, `DrillEntry`, `Progress` |
+| Read all | `lib/queries/drills.ts → getDrills()` ← `app/drills/page.tsx` |
+| Create / Update / Delete | `lib/actions/drills.ts` ← `components/drills-page-client.tsx` |
 
-**If you add a column to `drills`:** update `Drills.jsx` (form), and any display that reads `d.drills.*` in `SessionOverview`, `SessionView`, `DrillEntry`.
+**If you add a column:** update `getDrills()` query, drill form in `components/drill-form.tsx`, and any display in `drill-scoring-client.tsx`.
 
 ---
 
 ### `block_templates` + `block_template_drills`
-Columns: `id, name, description, session_count` / `template_id, drill_id, sort_order`
+Columns: `id, name, description, target_days, is_default` / `template_id, drill_id, sort_order`
 
 | Operation | File |
 |---|---|
-| Read all | `db.js → getTemplates()` ← `Home.jsx` |
-| Read one | `db.js → getTemplate(id)` ← `db.js` internal (startBlock, startNextSession, getOutstandingDrills, getBlockDrillProgress) |
-| Create / Update / Delete | `db.js → createTemplate / updateTemplate / deleteTemplate` ← `Drills.jsx` |
+| Read all | `lib/queries/templates.ts → getTemplates()` ← `app/page.tsx`, `app/drills/page.tsx` |
+| Create / Update / Delete | `lib/actions/templates.ts` ← `components/drills-page-client.tsx` |
 
-**If you change template structure:** `getTemplate()` in `db.js` is the single read path — update it and all callers listed above cascade automatically.
+**If you change template structure:** `getTemplates()` is the single read path — update it and callers cascade.
 
 ---
 
 ### `training_blocks`
-Columns: `id, template_id, name, session_count, status, started_at, completed_at`
+Columns: `id, template_id, name, target_days, status, started_at, completed_at`
 
 | Operation | File |
 |---|---|
-| Read active | `db.js → getActiveBlock()` ← `Home.jsx` |
-| Read all | `db.js → getBlocks()` ← `History.jsx` |
-| Read one | `db.js → getBlock(id)` ← `BlockDetail.jsx` |
-| Create | `db.js → startBlock()` ← `Home.jsx` |
-| Complete | `db.js → completeBlock()` ← `Home.jsx` |
-
-**If you add a block-level field (e.g., goal score):** add to `getBlock`, `getBlocks`, `getActiveBlock` selects; display in `BlockDetail`, `History`, `Home`.
+| Read active | `lib/queries/blocks.ts → getActiveBlock()` ← `app/page.tsx` |
+| Read all | `lib/queries/blocks.ts → getBlocks()` ← `app/history/page.tsx` |
+| Read one | `lib/queries/blocks.ts → getBlock(id)` ← `app/history/[blockId]/page.tsx` |
+| Start | `lib/actions/blocks.ts → startBlock()` ← `app/page.tsx` (server action) |
+| Complete | `lib/actions/blocks.ts → completeBlock()` ← block detail page |
 
 ---
 
-### `sessions`
-Columns: `id, block_id, session_number, status, session_date, notes`
+### `drill_logs`
+Columns: `id, block_id (nullable), drill_id, score (nullable), skipped, log_date, created_at`
+
+This is the core of the day-based model. One row per drill per day (or per attempt).
 
 | Operation | File |
 |---|---|
-| Read with drills | `db.js → getSessionWithDrills(id)` ← `SessionOverview.jsx`, `Home.jsx (LastScores)` |
-| Create | `db.js → startNextSession()` ← `Home.jsx`, `db.js (startBlock)` |
-| Complete | `db.js → completeSession()` ← `DrillEntry.jsx`, `SessionOverview.jsx` |
-| Delete | `db.js → deleteSession()` ← `SessionOverview.jsx` |
+| Read today's logs | `lib/queries/drill-logs.ts → getTodayLogs(blockId)` ← drill scoring pages |
+| Read for comparison | `lib/queries/drill-logs.ts → getDrillComparison(blockId, drillId, score)` |
+| Read for progress charts | `lib/queries/progress.ts → getProgressForAllDrills()` ← `app/progress/page.tsx` |
+| Save score (in-block) | `lib/actions/drill-logs.ts → saveDrillLog(blockId, drillId, score)` ← `drill-scoring-client.tsx` |
+| Skip drill (in-block) | `lib/actions/drill-logs.ts → skipDrillLog(blockId, drillId)` ← `drill-scoring-client.tsx` |
+| Log ad-hoc (no block) | `lib/actions/drill-logs.ts → logDrillScore(drillId, score, date?)` ← `drills-page-client.tsx` |
+
+**If you add a column:** update INSERT statements in all three actions above and SELECT in the query files.
 
 ---
 
-### `session_drills`
-Columns: `id, session_id, drill_id, score, skipped, sort_order`
+## Server Actions → Page/Component Consumers
 
-| Operation | File |
-|---|---|
-| Save score | `db.js → saveScore()` ← `DrillEntry.jsx`, `SessionView.jsx` |
-| Skip drill | `db.js → skipDrill()` ← `DrillEntry.jsx`, `SessionOverview.jsx`, `SessionView.jsx` |
-| Remove (pre-session) | `db.js → removeSessionDrill()` ← `SessionOverview.jsx` |
-| Reorder | `db.js → reorderDrills()` ← `SessionOverview.jsx` |
-| Read for progress | `db.js → getBlockDrillProgress()` ← `Home.jsx`, `History.jsx`, `BlockDetail.jsx` |
-| Read for chart | `db.js → getProgressForAllDrills()` ← `Progress.jsx` |
-| Read outstanding | `db.js → getOutstandingDrills()` ← `DrillEntry.jsx`, `db.js (startNextSession)` |
-| Read for summary | `db.js → getBlockCompletionSummary()` ← `BlockDetail.jsx` |
+| Action | Exported functions | Used by |
+|---|---|---|
+| `lib/actions/blocks.ts` | `startBlock`, `completeBlock` | `app/page.tsx`, block detail pages |
+| `lib/actions/drill-logs.ts` | `saveDrillLog`, `skipDrillLog`, `logDrillScore` | `drill-scoring-client.tsx`, `drills-page-client.tsx` |
+| `lib/actions/drills.ts` | `createDrill`, `updateDrill`, `deleteDrill` | `drills-page-client.tsx` |
+| `lib/actions/templates.ts` | `createTemplate`, `updateTemplate`, `deleteTemplate` | `drills-page-client.tsx` |
 
-**`skipped` column touches:** `saveScore`, `skipDrill`, `getOutstandingDrills`, `getBlockDrillProgress`, `getProgressForAllDrills`, `SessionOverview` (handleFinishEarly filter), `SessionView` (display).
-
-**If you add a column to `session_drills`:** update relevant `db.js` selects and any component that reads `d.*` directly.
+All actions call `revalidatePath()` to invalidate the relevant server component cache after mutations.
 
 ---
 
-## DB Functions → Page Consumers
+## Query Functions → Page Consumers
 
-| `db.js` function | Used by |
-|---|---|
-| `getDrills` | `Drills.jsx` |
-| `getDrill` | `Drills.jsx` |
-| `createDrill` / `updateDrill` / `deleteDrill` | `Drills.jsx` |
-| `getTemplates` | `Home.jsx` |
-| `getTemplate` | Internal (`startBlock`, `startNextSession`, `getOutstandingDrills`, `getBlockDrillProgress`) |
-| `createTemplate` / `updateTemplate` / `deleteTemplate` | `Drills.jsx` |
-| `getActiveBlock` | `Home.jsx` |
-| `getBlocks` | `History.jsx` |
-| `getBlock` | `BlockDetail.jsx` |
-| `startBlock` | `Home.jsx` |
-| `completeBlock` | `Home.jsx` |
-| `getSessionWithDrills` | `SessionOverview.jsx`, `Home.jsx` (LastScores) |
-| `startNextSession` | `Home.jsx`, `db.js` (startBlock) |
-| `completeSession` | `DrillEntry.jsx`, `SessionOverview.jsx` |
-| `deleteSession` | `SessionOverview.jsx` |
-| `reorderDrills` | `SessionOverview.jsx` |
-| `saveScore` | `DrillEntry.jsx`, `SessionView.jsx` |
-| `skipDrill` | `DrillEntry.jsx`, `SessionOverview.jsx`, `SessionView.jsx` |
-| `removeSessionDrill` | `SessionOverview.jsx` |
-| `getOutstandingDrills` | `DrillEntry.jsx`, `db.js` (startNextSession) |
-| `getBlockDrillProgress` | `Home.jsx`, `History.jsx`, `BlockDetail.jsx` |
-| `getProgressForAllDrills` | `Progress.jsx` |
-| `getBlockCompletionSummary` | `BlockDetail.jsx` |
+| Query file | Functions | Used by |
+|---|---|---|
+| `lib/queries/blocks.ts` | `getActiveBlock`, `getBlocks`, `getBlock` | home, history, block detail pages |
+| `lib/queries/drill-logs.ts` | `getTodayLogs`, `getDrillComparison` | drill scoring pages |
+| `lib/queries/drills.ts` | `getDrills` | drills page |
+| `lib/queries/progress.ts` | `getProgressForAllDrills` | progress page |
+| `lib/queries/templates.ts` | `getTemplates` | home page (template picker), drills page |
 
 ---
 
 ## Feature Concepts → Files
 
-### "Drill progress counter" (drillsDone / totalDrills)
-Displayed identically on three pages. All three call `getBlockDrillProgress` independently.
-- **Source of truth:** `db.js → getBlockDrillProgress()`
-- **Displays:** `Home.jsx` (active block card + progress bar), `History.jsx` (block list subtitle), `BlockDetail.jsx` (block subtitle)
-- **To change the formula or display:** update `getBlockDrillProgress` in `db.js` + the display string in all three pages.
+### "Day as session"
+There are no `sessions`. A "day of practice" = all `drill_logs` rows with the same `log_date` for a block.
+- `lib/queries/drill-logs.ts → getTodayLogs(blockId)` returns today's already-scored drills
+- `app/blocks/[blockId]/drills/page.tsx` uses this to show which drills still need scoring today
+- Progress page groups by `log_date` to show per-day chart points
 
 ### "Block completion flow"
-A block ends when all template drills have at least one scored entry.
-- **Trigger A:** Last drill in last session → `DrillEntry.jsx → getOutstandingDrills` → if 0, navigate to `/history/:blockId`
-- **Trigger B:** Manual → `Home.jsx → completeBlock()` → navigate to `/history/:blockId`
-- **Result displayed:** `BlockDetail.jsx` (Block Summary section, completion summary)
+A block ends when all template drills have at least one non-skipped log entry.
+- Manual trigger: `completeBlock()` server action
+- Display: `app/history/[blockId]/page.tsx` + `components/block-completion-summary.tsx`
 
-### "Session execution flow"
-`Home` → `SessionOverview` → `DrillEntry` (×N drills) → back to `Home`
-- Navigation is URL-driven: `pos` and `total` query params passed to `DrillEntry`
-- `DrillEntry` owns the "advance to next drill or complete session" logic
-- `SessionOverview` owns pre-session setup (reorder, remove drills) and early finish
-
-### "Skipped drills"
-`skipped = true` on a `session_drills` row means the drill was not scored.
-- Set by: `skipDrill()` (per-drill in DrillEntry/SessionView) or `handleFinishEarly` (bulk in SessionOverview)
-- Excluded from: progress counts (`getBlockDrillProgress`), chart data (`getProgressForAllDrills`), outstanding check (`getOutstandingDrills`)
-- Displayed as: "skipped" label in `SessionView`, gap in `Progress` chart
+### "Drill scoring flow"
+`/` → `/blocks/:blockId/drills` → `/blocks/:blockId/drills/:drillId` (×N) → back to `/`
+- `drill-scoring-client.tsx` owns scoring UI state and calls `saveDrillLog` / `skipDrillLog`
+- After save, shows `drill-comparison-overlay.tsx` with performance vs history
+- `revalidatePath` in action refreshes server component cache when returning to home
 
 ### "Scoring direction"
 Each drill has `scoring_direction: 'higher_better' | 'lower_better'`.
-- Read by: `BlockDetail.jsx` (summary diff color), `Progress.jsx` (trend color), `SessionOverview.jsx` (icon)
-- **To add a new direction:** update all three display sites.
+- Read by: `app/progress/page.tsx` (chart label), `components/drill-comparison-overlay.tsx` (trend color)
+- **To add a new direction:** update both display sites.
+
+### "Progress charts"
+Recharts is client-side only (SSR-incompatible). Pattern used:
+- `app/progress/page.tsx` is a server component — fetches data, passes to `ProgressChartClient`
+- `components/progress-chart-client.tsx` is `'use client'` — uses `dynamic()` with `ssr: false`
+- `components/progress-chart.tsx` is the actual Recharts component
+
+### "Ad-hoc score logging"
+The `/drills` page allows logging a score for any drill without being in a training block.
+- `logDrillScore(drillId, score, date?)` inserts a `drill_log` with `block_id = null`
+- These logs appear in the progress charts but not in block-specific drill progress
 
 ---
 
@@ -162,31 +151,33 @@ Each drill has `scoring_direction: 'higher_better' | 'lower_better'`.
 
 | Component | Used by |
 |---|---|
-| `Layout.jsx` | All pages except `DrillEntry` |
-| `BottomNav.jsx` | `Layout.jsx` |
-| `ScoreInput.jsx` | `DrillEntry.jsx` |
-| `Numpad.jsx` | `ScoreInput.jsx` |
-| `DrillInstructions.jsx` | `DrillEntry.jsx` |
-| `CategoryBadge` (from `lib/categories.jsx`) | `SessionOverview.jsx`, `Drills.jsx` |
+| `components/nav/bottom-nav.tsx` | `app/layout.tsx` |
+| `components/score-input.tsx` | `components/drill-scoring-client.tsx` |
+| `components/numpad.tsx` | `components/score-input.tsx` |
+| `components/drill-instructions.tsx` | `components/drill-scoring-client.tsx` |
+| `components/drill-comparison-overlay.tsx` | `components/drill-scoring-client.tsx` |
+| `components/ui/*` | everywhere |
 
 ---
 
-## Supabase / Infrastructure
+## Infrastructure
 
-- Client: `src/lib/supabase.js` — single instance, imported only by `src/lib/db.js`
-- All DB access goes through `src/lib/db.js` — no page imports supabase directly
-- Categories: `src/lib/categories.jsx` — pure client-side constant, no DB column
+- **Database:** Supabase (hosted PostgreSQL)
+- **Connection:** `postgres.js` via `DATABASE_URL` environment variable — direct TCP, not Supabase JS SDK
+- **DB singleton:** `lib/db.ts` — all queries and actions import `sql` from here
+- **Deployment:** Vercel, auto-deploy on push to `main` branch of `reidabook/golf-practice`
+- **Env vars:** `DATABASE_URL` set in Vercel dashboard (not committed to repo)
 
-### Applied migrations (in order)
-1. Initial schema — tables: `drills`, `block_templates`, `block_template_drills`, `training_blocks`, `sessions`, `session_drills`
-2. `ALTER TABLE session_drills ADD COLUMN skipped BOOLEAN NOT NULL DEFAULT FALSE;`
-3. `ALTER TABLE drills ADD COLUMN source TEXT;` (drill source/origin field)
+### Why postgres.js instead of Supabase JS SDK?
+Next.js server components run in Node.js on Vercel — `postgres.js` works cleanly.
+The Supabase JS SDK uses the Supabase REST/Realtime API, which is unnecessary overhead
+for a single-user server-rendered app with direct DB access.
 
 ---
 
-## Pending / Known gaps
+## Known Gaps / Pending
 
 - No auth — single user assumed; all rows visible to all
-- `session_date` is set manually (not auto-populated on session start)
-- Progress chart X-axis uses `session_date`; sessions without a date fall back to `#N`
-- Template edits do not retroactively affect active blocks (by design)
+- `sessions` and `session_drills` tables still exist in Supabase DB but are unused
+- `schema.sql` in repo reflects old schema; needs update after day-based migration
+- Supabase DB password was shared in plain text during setup — should be rotated
