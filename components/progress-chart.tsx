@@ -30,19 +30,17 @@ export function ProgressChart({ progress }: ProgressChartProps) {
     )
   }
 
-  const chartData = dataPoints.map((dp, i) => ({
-    name: dp.source === 'standalone'
-      ? `L${i + 1}`
-      : `S${dp.sessionNumber}`,
-    score: dp.score,
-    date: dp.date,
-    blockName: dp.blockName,
-    source: dp.source,
-    fullLabel: dp.source === 'standalone'
-      ? `Standalone — ${dp.date}`
-      : `${dp.blockName} — Session ${dp.sessionNumber}`,
-    index: i,
-  }))
+  const chartData = dataPoints.map((dp) => {
+    const [, month, day] = dp.date.split('-')
+    return {
+      name: `${parseInt(month)}/${parseInt(day)}`,
+      score: dp.score,
+      date: dp.date,
+      blockName: dp.blockName,
+      source: dp.source,
+      fullLabel: `${dp.blockName} — ${dp.date}`,
+    }
+  })
 
   const boundaryIndices = new Set(
     blockBoundaries
@@ -54,24 +52,8 @@ export function ProgressChart({ progress }: ProgressChartProps) {
       .filter(Boolean)
   )
 
-  // Custom dot renderer to differentiate session vs standalone points
   const renderDot = (props: any) => {
-    const { cx, cy, payload } = props
-    if (payload.source === 'standalone') {
-      // Hollow circle for standalone logs
-      return (
-        <circle
-          key={`dot-${cx}-${cy}`}
-          cx={cx}
-          cy={cy}
-          r={4}
-          fill="hsl(0 0% 7%)"
-          stroke="hsl(142 71% 45%)"
-          strokeWidth={2}
-        />
-      )
-    }
-    // Filled circle for session scores
+    const { cx, cy } = props
     return (
       <circle
         key={`dot-${cx}-${cy}`}
