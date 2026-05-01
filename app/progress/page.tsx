@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getProgressForAllDrills } from '@/lib/queries/progress'
 import { ProgressChartClient } from '@/components/progress-chart-client'
 

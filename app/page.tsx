@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { getActiveBlock } from '@/lib/queries/blocks'
 import { getTemplates } from '@/lib/queries/templates'
