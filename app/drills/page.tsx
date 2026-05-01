@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getDrills } from '@/lib/queries/drills'
 import { getTemplates } from '@/lib/queries/templates'
 import { DrillsPageClient } from '@/components/drills-page-client'

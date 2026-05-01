@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { getBlocks } from '@/lib/queries/blocks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
