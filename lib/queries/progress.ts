@@ -19,7 +19,7 @@ export async function getProgressForAllDrills(): Promise<DrillProgress[]> {
       const logRows = await sql`
         SELECT
           dl.score,
-          dl.log_date,
+          dl.log_date::text AS log_date,
           tb.name AS block_name,
           tb.id   AS block_id
         FROM drill_logs dl
