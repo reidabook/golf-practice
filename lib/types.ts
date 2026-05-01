@@ -1,6 +1,6 @@
 export type ScoringDirection = 'higher_better' | 'lower_better'
 export type BlockStatus = 'active' | 'completed'
-export type SessionStatus = 'in_progress' | 'completed'
+export type TrendDirection = 'better' | 'worse' | 'same' | 'first'
 
 export interface Drill {
   id: string
@@ -19,7 +19,7 @@ export interface BlockTemplate {
   id: string
   name: string
   description: string | null
-  session_count: number
+  target_days: number
   is_default: boolean
   created_at: string
   drills?: TemplateDrill[]
@@ -37,58 +37,67 @@ export interface TrainingBlock {
   id: string
   template_id: string | null
   name: string
-  session_count: number
+  target_days: number
   status: BlockStatus
   started_at: string
   completed_at: string | null
 }
 
-export interface Session {
+export interface DrillLog {
   id: string
   block_id: string
-  session_number: number
-  session_date: string
-  status: SessionStatus
-  notes: string | null
+  drill_id: string
+  score: number | null
+  skipped: boolean
+  log_date: string
   created_at: string
 }
 
-export interface SessionDrill {
-  id: string
-  session_id: string
-  drill_id: string
-  score: number | null
-  sort_order: number
-  skipped: boolean
+export interface DrillLogWithDrill extends DrillLog {
   drill: Drill
 }
 
-// Composite types for UI
+export interface BlockDrillItem {
+  drill: Drill
+  sort_order: number
+  done_today: boolean       // scored (not skipped) today
+  last_score: number | null // most recent scored log in this block
+  last_log_date: string | null
+}
+
+export interface DrillComparison {
+  current_score: number
+  previous_score: number | null  // null = first entry in this block
+  personal_best: number | null
+  trend: TrendDirection
+  drill: Drill
+}
+
+export interface DrillSaveResult {
+  log: DrillLog
+  comparison: DrillComparison
+}
 
 export interface ActiveBlockInfo {
   block: TrainingBlock
-  nextSession: Session | null
-  inProgressSession: Session | null
-  completedCount: number
-  lastSessionDrills: SessionDrill[]
+  completed_days: number      // distinct days with ≥1 scored log
+  todays_drill_count: number  // scored drills today
 }
 
-export interface SessionWithDrills extends Session {
-  drills: SessionDrill[]
-  block: TrainingBlock
+export interface DayLog {
+  log_date: string
+  drills: DrillLogWithDrill[]
 }
 
-export interface BlockWithSessions extends TrainingBlock {
-  sessions: SessionWithHistory[]
+export interface BlockWithDayLogs extends TrainingBlock {
   template: BlockTemplate | null
+  day_logs: DayLog[]          // ordered newest first
 }
 
-export interface SessionWithHistory extends Session {
-  drills: SessionDrill[]
-}
+// Progress chart types
 
 export interface DrillProgress {
-  drill: Drill
+  drill: Pick<Drill, 'id' | 'name' | 'unit' | 'scoring_direction'>
   dataPoints: ProgressDataPoint[]
   personalBest: number | null
   blockBoundaries: BlockBoundary[]
@@ -98,22 +107,11 @@ export interface ProgressDataPoint {
   date: string
   score: number
   blockName: string
-  sessionNumber: number
   blockId: string
-  source: 'session' | 'standalone'
+  source: 'drill_log'
 }
 
 export interface BlockBoundary {
-  date: string
-  blockName: string
   blockId: string
-}
-
-export interface DrillLog {
-  id: string
-  drill_id: string
-  score: number
-  logged_at: string
-  notes: string | null
-  created_at: string
+  blockName: string
 }

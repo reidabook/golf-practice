@@ -19,12 +19,12 @@ CREATE TABLE IF NOT EXISTS drills (
 
 -- Reusable block templates
 CREATE TABLE IF NOT EXISTS block_templates (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name          TEXT NOT NULL,
-  description   TEXT,
-  session_count INTEGER NOT NULL DEFAULT 8,
-  is_default    BOOLEAN NOT NULL DEFAULT false,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name         TEXT NOT NULL,
+  description  TEXT,
+  target_days  INTEGER NOT NULL DEFAULT 8,
+  is_default   BOOLEAN NOT NULL DEFAULT false,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Ordered drills within a template
@@ -38,44 +38,32 @@ CREATE TABLE IF NOT EXISTS block_template_drills (
 
 -- Active or completed block instances
 CREATE TABLE IF NOT EXISTS training_blocks (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_id   UUID REFERENCES block_templates(id) ON DELETE SET NULL,
-  name          TEXT NOT NULL,
-  session_count INTEGER NOT NULL,
-  status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed')),
-  started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  completed_at  TIMESTAMPTZ
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id  UUID REFERENCES block_templates(id) ON DELETE SET NULL,
+  name         TEXT NOT NULL,
+  target_days  INTEGER NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed')),
+  started_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ
 );
 
--- Sessions within a training block
-CREATE TABLE IF NOT EXISTS sessions (
-  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  block_id       UUID NOT NULL REFERENCES training_blocks(id) ON DELETE CASCADE,
-  session_number INTEGER NOT NULL,
-  session_date   DATE NOT NULL DEFAULT CURRENT_DATE,
-  status         TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'completed')),
-  notes          TEXT,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (block_id, session_number)
-);
-
--- Drill scores per session
-CREATE TABLE IF NOT EXISTS session_drills (
+-- Individual drill log entries (replaces sessions + session_drills)
+CREATE TABLE IF NOT EXISTS drill_logs (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  block_id   UUID NOT NULL REFERENCES training_blocks(id) ON DELETE CASCADE,
   drill_id   UUID NOT NULL REFERENCES drills(id) ON DELETE RESTRICT,
   score      NUMERIC,
   skipped    BOOLEAN NOT NULL DEFAULT FALSE,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  UNIQUE (session_id, drill_id)
+  log_date   DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_session_drills_session  ON session_drills(session_id);
-CREATE INDEX IF NOT EXISTS idx_session_drills_drill    ON session_drills(drill_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_block          ON sessions(block_id);
-CREATE INDEX IF NOT EXISTS idx_training_blocks_status  ON training_blocks(status);
-CREATE INDEX IF NOT EXISTS idx_btd_template            ON block_template_drills(template_id);
+CREATE INDEX IF NOT EXISTS idx_drill_logs_block  ON drill_logs(block_id);
+CREATE INDEX IF NOT EXISTS idx_drill_logs_drill  ON drill_logs(drill_id);
+CREATE INDEX IF NOT EXISTS idx_drill_logs_date   ON drill_logs(block_id, log_date);
+CREATE INDEX IF NOT EXISTS idx_training_blocks_status ON training_blocks(status);
+CREATE INDEX IF NOT EXISTS idx_btd_template      ON block_template_drills(template_id);
 
 -- =====================
 -- SEED DATA (idempotent)
@@ -121,10 +109,10 @@ VALUES
   )
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO block_templates (name, description, session_count, is_default)
+INSERT INTO block_templates (name, description, target_days, is_default)
 VALUES (
   'Break 90 Program',
-  'An 8-session program designed to help you break 90 by building fundamentals across putting, short game, and course management.',
+  'An 8-day program designed to help you break 90 by building fundamentals across putting, short game, and course management.',
   8,
   true
 )
@@ -139,15 +127,13 @@ ALTER TABLE drills               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE block_templates      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE block_template_drills ENABLE ROW LEVEL SECURITY;
 ALTER TABLE training_blocks      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE session_drills       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE drill_logs           ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "public_all" ON drills                FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "public_all" ON block_templates       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "public_all" ON block_template_drills FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "public_all" ON training_blocks       FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "public_all" ON sessions              FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "public_all" ON session_drills        FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "public_all" ON drill_logs            FOR ALL USING (true) WITH CHECK (true);
 
 -- Link all 6 drills to the Break 90 template (in order)
 DO $$

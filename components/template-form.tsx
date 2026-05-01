@@ -13,7 +13,7 @@ interface TemplateFormProps {
   onSave: (data: {
     name: string
     description: string
-    session_count: number
+    target_days: number
     drill_ids: string[]
   }) => void
   onClose: () => void
@@ -23,7 +23,7 @@ interface TemplateFormProps {
 export function TemplateForm({ template, drills, onSave, onClose, isPending }: TemplateFormProps) {
   const [name, setName] = useState(template?.name ?? '')
   const [description, setDescription] = useState(template?.description ?? '')
-  const [sessionCount, setSessionCount] = useState(String(template?.session_count ?? 8))
+  const [targetDays, setTargetDays] = useState(String(template?.target_days ?? 8))
   const [selectedIds, setSelectedIds] = useState<string[]>(
     template?.drills?.map((d) => d.drill_id) ?? []
   )
@@ -53,7 +53,7 @@ export function TemplateForm({ template, drills, onSave, onClose, isPending }: T
     onSave({
       name: name.trim(),
       description: description.trim(),
-      session_count: Number(sessionCount),
+      target_days: Number(targetDays),
       drill_ids: selectedIds,
     })
   }
@@ -83,14 +83,14 @@ export function TemplateForm({ template, drills, onSave, onClose, isPending }: T
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="t-count">Number of Sessions</Label>
+            <Label htmlFor="t-count">Number of Days</Label>
             <Input
               id="t-count"
               type="number"
               min={1}
               max={52}
-              value={sessionCount}
-              onChange={(e) => setSessionCount(e.target.value)}
+              value={targetDays}
+              onChange={(e) => setTargetDays(e.target.value)}
               required
             />
           </div>

@@ -45,7 +45,7 @@ export default async function HistoryPage() {
                   {block.completed_at && ` → ${formatDate(block.completed_at)}`}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {block.session_count} sessions
+                  {block.target_days} days
                 </p>
               </CardContent>
             </Card>
