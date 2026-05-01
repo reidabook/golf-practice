@@ -25,7 +25,7 @@ export async function getBlocks(): Promise<TrainingBlock[]> {
   const rows = await sql`
     SELECT * FROM training_blocks ORDER BY started_at DESC
   `
-  return rows as TrainingBlock[]
+  return rows as unknown as TrainingBlock[]
 }
 
 export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
