@@ -81,7 +81,7 @@ export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
       dl.drill_id,
       dl.score,
       dl.skipped,
-      dl.log_date,
+      dl.log_date::text AS log_date,
       dl.created_at,
       d.name        AS drill_name,
       d.description AS drill_description,
