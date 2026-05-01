@@ -40,3 +40,18 @@ export async function skipDrillLog(blockId: string, drillId: string): Promise<vo
   `
   revalidatePath(`/blocks/${blockId}/drills`)
 }
+
+// Ad-hoc log from the Drills library page (no block context)
+export async function logDrillScore(
+  drillId: string,
+  score: number,
+  date?: string,
+  _notes?: string
+): Promise<void> {
+  const logDate = date ?? new Date().toISOString().split('T')[0]
+  await sql`
+    INSERT INTO drill_logs (drill_id, score, skipped, log_date)
+    VALUES (${drillId}, ${score}, false, ${logDate}::date)
+  `
+  revalidatePath('/progress')
+}
