@@ -12,6 +12,18 @@ Client components (`'use client'`) are used only for interactivity (forms, state
 All DB writes go through **server actions** (`lib/actions/`).
 All DB reads go through **query functions** (`lib/queries/`) called from server components.
 
+### `force-dynamic` requirement
+
+Every static-path page that queries the database **must** export:
+```ts
+export const dynamic = 'force-dynamic'
+```
+
+Without this, Next.js attempts to prerender the page at build time. The Vercel build
+environment cannot reach Supabase, so the build fails with `ENETUNREACH`.
+Dynamic route pages (`[blockId]`, `[drillId]`) are exempt — they are not prerendered
+unless `generateStaticParams` is defined.
+
 ---
 
 ## Routes
