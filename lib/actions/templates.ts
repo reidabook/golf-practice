@@ -6,12 +6,12 @@ import { revalidatePath } from 'next/cache'
 export async function createTemplate(data: {
   name: string
   description: string
-  session_count: number
+  target_days: number
   drill_ids: string[]
 }): Promise<void> {
   const templateRows = await sql`
-    INSERT INTO block_templates (name, description, session_count)
-    VALUES (${data.name}, ${data.description || null}, ${data.session_count})
+    INSERT INTO block_templates (name, description, target_days)
+    VALUES (${data.name}, ${data.description || null}, ${data.target_days})
     RETURNING id
   `
   const templateId = templateRows[0].id as string
@@ -31,7 +31,7 @@ export async function updateTemplate(
   data: {
     name: string
     description: string
-    session_count: number
+    target_days: number
     drill_ids: string[]
   }
 ): Promise<void> {
@@ -39,7 +39,7 @@ export async function updateTemplate(
     UPDATE block_templates
     SET name = ${data.name},
         description = ${data.description || null},
-        session_count = ${data.session_count}
+        target_days = ${data.target_days}
     WHERE id = ${id}
   `
 

@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { BlockCompletionSummary } from '@/components/block-completion-summary'
 import { formatDate, formatScoreWithUnit } from '@/lib/utils'
-import { ChevronRight } from 'lucide-react'
 
 export default async function BlockDetailPage({
   params,
@@ -17,7 +16,7 @@ export default async function BlockDetailPage({
   const block = await getBlock(blockId)
   if (!block) notFound()
 
-  const completedSessions = block.sessions.filter((s) => s.status === 'completed')
+  const totalDays = block.day_logs.length
 
   return (
     <div className="p-4 space-y-4">
@@ -34,57 +33,52 @@ export default async function BlockDetailPage({
           {formatDate(block.started_at)}
           {block.completed_at && ` → ${formatDate(block.completed_at)}`}
         </p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {totalDays} of {block.target_days} days logged
+        </p>
       </div>
 
-      {/* Completion summary for finished blocks */}
-      {block.status === 'completed' && completedSessions.length >= 2 && (
-        <BlockCompletionSummary sessions={completedSessions} />
+      {/* Completion summary for finished blocks with ≥2 days */}
+      {block.status === 'completed' && block.day_logs.length >= 2 && (
+        <BlockCompletionSummary block={block} />
       )}
 
-      {/* Sessions list */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Sessions ({completedSessions.length}/{block.session_count})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-0 p-0">
-          {block.sessions.map((session, i) => (
-            <div key={session.id}>
-              {i > 0 && <Separator />}
-              {session.status === 'completed' ? (
-                <Link href={`/history/${blockId}/sessions/${session.id}`}>
-                  <div className="flex items-center justify-between px-6 py-4 hover:bg-accent transition-colors">
-                    <div>
-                      <p className="font-medium">Session {session.session_number}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(session.session_date)}
-                      </p>
-                      {session.notes && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">
-                          &ldquo;{session.notes}&rdquo;
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">Done</Badge>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </div>
+      {/* Day-grouped drill logs (newest first) */}
+      {block.day_logs.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">No drills logged yet.</p>
+      ) : (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Drill Logs
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-0 p-0">
+            {block.day_logs.map((dayLog, i) => (
+              <div key={dayLog.log_date}>
+                {i > 0 && <Separator />}
+                <div className="px-6 py-4">
+                  <p className="text-sm font-semibold mb-2">{formatDate(dayLog.log_date)}</p>
+                  <div className="space-y-1.5">
+                    {dayLog.drills.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{entry.drill.name}</span>
+                        {entry.skipped ? (
+                          <Badge variant="secondary" className="text-xs">Skipped</Badge>
+                        ) : (
+                          <span className="text-sm font-mono font-semibold">
+                            {formatScoreWithUnit(entry.score, entry.drill.unit)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </Link>
-              ) : (
-                <div className="flex items-center justify-between px-6 py-4">
-                  <div>
-                    <p className="font-medium">Session {session.session_number}</p>
-                    <p className="text-sm text-muted-foreground">In progress</p>
-                  </div>
-                  <Badge variant="secondary">Active</Badge>
                 </div>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

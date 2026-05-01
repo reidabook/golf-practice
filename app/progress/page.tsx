@@ -19,7 +19,7 @@ export default async function ProgressPage() {
         <p className="text-4xl mb-4">📈</p>
         <h2 className="text-xl font-semibold mb-2">No data yet</h2>
         <p className="text-muted-foreground text-sm">
-          Complete sessions to see your progress charts here.
+          Log drills to see your progress charts here.
         </p>
       </div>
     )

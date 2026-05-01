@@ -170,7 +170,7 @@ export function DrillsPageClient({ drills: initialDrills, templates: initialTemp
                     {t.description && (
                       <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">{t.session_count} sessions</p>
+                    <p className="text-xs text-muted-foreground">{t.target_days} days</p>
                   </div>
                   <div className="flex gap-2">
                     <Button
