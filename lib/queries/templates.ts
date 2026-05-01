@@ -5,7 +5,7 @@ export async function getTemplates(): Promise<BlockTemplate[]> {
   const rows = await sql`
     SELECT * FROM block_templates ORDER BY is_default DESC, created_at ASC
   `
-  return rows as BlockTemplate[]
+  return rows as unknown as BlockTemplate[]
 }
 
 export async function getTemplate(id: string): Promise<BlockTemplate | null> {
@@ -52,7 +52,7 @@ export async function getTemplate(id: string): Promise<BlockTemplate | null> {
       is_default: r.is_default,
       created_at: r.drill_created_at,
     },
-  })) as TemplateDrill[]
+  })) as unknown as TemplateDrill[]
 
   return template
 }
