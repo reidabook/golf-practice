@@ -10,15 +10,23 @@ export async function getActiveBlock(): Promise<ActiveBlockInfo | null> {
 
   const statsRows = await sql`
     SELECT
-      COUNT(DISTINCT log_date) FILTER (WHERE skipped = false AND score IS NOT NULL) AS completed_days,
+      COUNT(*) FILTER (WHERE skipped = false AND score IS NOT NULL) AS completed_drills,
       COUNT(*) FILTER (WHERE log_date = CURRENT_DATE AND skipped = false AND score IS NOT NULL) AS todays_drill_count
     FROM drill_logs
     WHERE block_id = ${block.id}
   `
-  const completed_days = Number(statsRows[0]?.completed_days ?? 0)
+  const completed_drills = Number(statsRows[0]?.completed_drills ?? 0)
   const todays_drill_count = Number(statsRows[0]?.todays_drill_count ?? 0)
 
-  return { block, completed_days, todays_drill_count }
+  const templateDrillRows = await sql`
+    SELECT COUNT(*) AS drill_count
+    FROM block_template_drills
+    WHERE template_id = ${block.template_id}
+  `
+  const template_drill_count = Number(templateDrillRows[0]?.drill_count ?? 0)
+  const total_drills = template_drill_count * block.target_days
+
+  return { block, completed_drills, total_drills, todays_drill_count }
 }
 
 export async function getBlocks(): Promise<TrainingBlock[]> {

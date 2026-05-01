@@ -70,8 +70,8 @@ export default async function Home() {
     )
   }
 
-  const { block, completed_days, todays_drill_count } = activeInfo
-  const progressPct = Math.round((completed_days / block.target_days) * 100)
+  const { block, completed_drills, total_drills, todays_drill_count } = activeInfo
+  const progressPct = total_drills > 0 ? Math.round((completed_drills / total_drills) * 100) : 0
 
   return (
     <div className="p-4 space-y-4">
@@ -86,8 +86,8 @@ export default async function Home() {
       {/* Progress bar */}
       <div className="space-y-1.5">
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{completed_days} of {block.target_days} days</span>
-          <span>{block.target_days - completed_days} remaining</span>
+          <span>{completed_drills} of {total_drills} drills</span>
+          <span>{total_drills - completed_drills} remaining</span>
         </div>
         <Progress value={progressPct} className="h-2" />
       </div>

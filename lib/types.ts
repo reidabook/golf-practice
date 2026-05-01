@@ -80,7 +80,8 @@ export interface DrillSaveResult {
 
 export interface ActiveBlockInfo {
   block: TrainingBlock
-  completed_days: number      // distinct days with ≥1 scored log
+  completed_drills: number    // total scored (non-skipped) drill logs in block
+  total_drills: number        // template drill count × target_days
   todays_drill_count: number  // scored drills today
 }
 
