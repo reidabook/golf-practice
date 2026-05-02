@@ -15,9 +15,10 @@
 
 ### GHIN sync (server-side, `lib/utils/ghin-sync.ts`)
 - Requires Vercel env vars: `GHIN_USERNAME`, `GHIN_PASSWORD`, `GHIN_NUMBER`
-- Auth flow: Firebase session token → GHIN `/golfer_login.json` → Bearer token → `/search_golfer.json`
+- Auth flow: Firebase Installations token → GHIN `POST /golfer_login.json` → extract `golfer.display` from `golfer_user.golfers[0]`
+- Handicap field: `display` (string, e.g. `"19.4"`) — not `handicap_index` or any other name
 - One snapshot per calendar day (UTC); subsequent loads are no-ops
-- Errors are swallowed — page renders without handicap data if sync fails
+- Sync errors are caught and surfaced as an amber banner on the page; page still renders
 
 ---
 
