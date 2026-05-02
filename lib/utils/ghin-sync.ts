@@ -2,6 +2,8 @@ import { sql } from '@/lib/db'
 
 const GHIN_API_BASE = 'https://api2.ghin.com/api/v1'
 const FIREBASE_API_KEY = 'AIzaSyBxgTOAWxiud0HuaE5tN-5NTlzFnrtyz-I'
+const USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
 
 async function getFirebaseToken(): Promise<string> {
   const res = await fetch(
@@ -10,6 +12,7 @@ async function getFirebaseToken(): Promise<string> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': USER_AGENT,
         'x-goog-api-key': FIREBASE_API_KEY,
       },
       body: JSON.stringify({
@@ -32,7 +35,7 @@ async function getGhinBearerToken(firebaseToken: string): Promise<string> {
 
   const res = await fetch(`${GHIN_API_BASE}/golfer_login.json`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
     body: JSON.stringify({
       token: firebaseToken,
       user: { email_or_ghin: username, password },
@@ -48,6 +51,8 @@ async function fetchGhinHandicap(bearerToken: string, ghinNumber: number): Promi
     `${GHIN_API_BASE}/search_golfer.json?ghin=${ghinNumber}&source=GHINcom`,
     {
       headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': USER_AGENT,
         Authorization: `Bearer ${bearerToken}`,
         source: 'GHINcom',
       },
