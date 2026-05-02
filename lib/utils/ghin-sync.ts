@@ -64,11 +64,13 @@ async function fetchGhinHandicap(bearerToken: string, ghinNumber: number): Promi
 /**
  * Fetches the current GHIN handicap index and stores it as today's snapshot.
  * Skips silently if credentials aren't configured or a snapshot already exists today.
- * Never throws — errors are logged and swallowed so the page still renders.
+ * Returns { ok: false, error } if credentials are configured but sync fails.
  */
-export async function syncHandicapToday(): Promise<void> {
+export async function syncHandicapToday(): Promise<{ ok: boolean; error?: string }> {
   const ghinNumberStr = process.env.GHIN_NUMBER
-  if (!ghinNumberStr || !process.env.GHIN_USERNAME || !process.env.GHIN_PASSWORD) return
+  if (!ghinNumberStr || !process.env.GHIN_USERNAME || !process.env.GHIN_PASSWORD) {
+    return { ok: true }
+  }
 
   try {
     const today = new Date().toISOString().split('T')[0]
@@ -77,7 +79,7 @@ export async function syncHandicapToday(): Promise<void> {
     const existing = await sql`
       SELECT 1 FROM handicap_snapshots WHERE snapshot_date = ${today} LIMIT 1
     `
-    if (existing.length > 0) return
+    if (existing.length > 0) return { ok: true }
 
     const firebaseToken = await getFirebaseToken()
     const bearerToken = await getGhinBearerToken(firebaseToken)
@@ -88,7 +90,9 @@ export async function syncHandicapToday(): Promise<void> {
       VALUES (${today}, ${handicapIndex})
       ON CONFLICT (snapshot_date) DO UPDATE SET handicap_index = EXCLUDED.handicap_index
     `
+    return { ok: true }
   } catch (err) {
     console.error('[ghin-sync] Failed to sync handicap:', err)
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
 }
