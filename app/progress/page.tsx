@@ -7,7 +7,7 @@ import { ProgressChartClient } from '@/components/progress-chart-client'
 import { HandicapChartClient } from '@/components/handicap-chart-client'
 
 export default async function ProgressPage() {
-  const [, drillProgress, handicapHistory] = await Promise.all([
+  const [syncResult, drillProgress, handicapHistory] = await Promise.all([
     syncHandicapToday(),
     getProgressForAllDrills(),
     getHandicapHistory(),
@@ -31,6 +31,15 @@ export default async function ProgressPage() {
   return (
     <div className="p-4 space-y-6">
       <h1 className="text-2xl font-bold">Progress</h1>
+
+      {!syncResult.ok && (
+        <div className="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-400">
+          Handicap sync failed — check Vercel logs for details.
+          {syncResult.error && (
+            <span className="block mt-1 text-xs text-amber-600">{syncResult.error}</span>
+          )}
+        </div>
+      )}
 
       {hasHandicapData && (
         <div className="space-y-2">
