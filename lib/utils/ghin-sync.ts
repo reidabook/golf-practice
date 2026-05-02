@@ -28,7 +28,7 @@ async function getFirebaseToken(): Promise<string> {
   return data.authToken.token as string
 }
 
-async function getGhinBearerToken(firebaseToken: string): Promise<string> {
+async function getGhinHandicapFromLogin(firebaseToken: string): Promise<number> {
   const username = process.env.GHIN_USERNAME
   const password = process.env.GHIN_PASSWORD
   if (!username || !password) throw new Error('GHIN_USERNAME / GHIN_PASSWORD not configured')
@@ -43,32 +43,17 @@ async function getGhinBearerToken(firebaseToken: string): Promise<string> {
   })
   if (!res.ok) throw new Error(`GHIN login failed: ${res.status}`)
   const data = await res.json()
-  return data.golfer_user.golfer_user_token as string
-}
+  console.log('[ghin-sync] Login golfer_user keys:', Object.keys(data.golfer_user ?? {}).join(', '))
 
-async function fetchGhinHandicap(bearerToken: string, ghinNumber: number): Promise<number> {
-  const res = await fetch(
-    `${GHIN_API_BASE}/search_golfer.json?ghin=${ghinNumber}&source=GHINcom`,
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': USER_AGENT,
-        Authorization: `Bearer ${bearerToken}`,
-        source: 'GHINcom',
-      },
-    }
-  )
-  if (!res.ok) {
-    const body = await res.text().catch(() => '(unreadable)')
-    console.error('[ghin-sync] Search response body:', body)
-    throw new Error(`GHIN search failed: ${res.status}`)
-  }
-  const data = await res.json()
-  console.log('[ghin-sync] Search response:', JSON.stringify(data).slice(0, 500))
-  // API may return golfers[] array or golfer singular
-  const golfer = data.golfers?.[0] ?? data.golfer
-  if (!golfer) throw new Error('Golfer not found in GHIN response')
-  return Number(golfer.handicap_index)
+  // The login response contains the golfer's own profile — extract handicap directly
+  const golferUser = data.golfer_user
+  const golfers: any[] = golferUser?.golfers ?? []
+  const golfer = golfers[0] ?? golferUser
+
+  const handicap = golfer?.handicap_index ?? golfer?.hi ?? golfer?.HandicapIndex
+  console.log('[ghin-sync] Extracted handicap:', handicap)
+  if (handicap == null) throw new Error('Handicap index not found in login response')
+  return Number(handicap)
 }
 
 /**
@@ -92,8 +77,7 @@ export async function syncHandicapToday(): Promise<{ ok: boolean; error?: string
     if (existing.length > 0) return { ok: true }
 
     const firebaseToken = await getFirebaseToken()
-    const bearerToken = await getGhinBearerToken(firebaseToken)
-    const handicapIndex = await fetchGhinHandicap(bearerToken, Number(ghinNumberStr))
+    const handicapIndex = await getGhinHandicapFromLogin(firebaseToken)
 
     await sql`
       INSERT INTO handicap_snapshots (snapshot_date, handicap_index)
