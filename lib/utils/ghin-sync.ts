@@ -43,14 +43,14 @@ async function getGhinHandicapFromLogin(firebaseToken: string): Promise<number> 
   })
   if (!res.ok) throw new Error(`GHIN login failed: ${res.status}`)
   const data = await res.json()
-  console.log('[ghin-sync] Login golfer_user keys:', Object.keys(data.golfer_user ?? {}).join(', '))
+
+  // Single log to avoid Vercel per-request log truncation
+  console.log('[ghin-sync] login response:', JSON.stringify(data).slice(0, 2000))
 
   // The login response contains the golfer's own profile — extract handicap directly
   const golferUser = data.golfer_user
   const golfers: any[] = golferUser?.golfers ?? []
   const golfer = golfers[0] ?? golferUser
-
-  console.log('[ghin-sync] golfers[0]:', JSON.stringify(golfer).slice(0, 500))
 
   const handicap =
     golfer?.handicap_index ??
@@ -59,7 +59,6 @@ async function getGhinHandicapFromLogin(firebaseToken: string): Promise<number> 
     golfer?.Handicap_Index ??
     golfer?.handicap ??
     golfer?.index_val
-  console.log('[ghin-sync] Extracted handicap:', handicap)
   if (handicap == null) throw new Error('Handicap index not found in login response')
   return Number(handicap)
 }
