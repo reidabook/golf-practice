@@ -21,6 +21,18 @@ This rule exists because the Supabase free plan has no self-serve backups. Data 
 
 ---
 
+## Feature Preservation — MANDATORY
+
+**Before making ANY change to the app:**
+
+1. Read `FEATURES.md` to understand what currently exists.
+2. After making changes, verify that every feature touched or nearby still works as described.
+3. If a change will remove or alter an existing feature, call it out explicitly and get confirmation before proceeding.
+
+This rule exists because features have been silently lost during past edits.
+
+---
+
 ## Stack
 
 - **Framework:** Next.js 15 App Router (server components by default)
