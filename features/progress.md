@@ -4,7 +4,24 @@
 
 ---
 
-## Charts
+## Handicap Index Section (top of page)
+
+- Shown only when at least one snapshot exists in `handicap_snapshots`
+- Displays the most recent handicap index as a large number next to the section heading
+- "↓ lower is better" label beneath heading
+- Line chart of handicap history over time (same chart style as drill charts)
+- Trend line: **green** if slope ≤ 0 (improving / declining), **red** if slope > 0 (worsening / rising)
+- Auto-synced: on each page load, if no snapshot exists for today and GHIN credentials are configured, a fresh handicap is fetched from the GHIN API and stored
+
+### GHIN sync (server-side, `lib/utils/ghin-sync.ts`)
+- Requires Vercel env vars: `GHIN_USERNAME`, `GHIN_PASSWORD`, `GHIN_NUMBER`
+- Auth flow: Firebase session token → GHIN `/golfer_login.json` → Bearer token → `/search_golfer.json`
+- One snapshot per calendar day (UTC); subsequent loads are no-ops
+- Errors are swallowed — page renders without handicap data if sync fails
+
+---
+
+## Drill Charts
 
 - One line chart per drill showing score history over time
 - X-axis: dates (M/D format)
@@ -25,4 +42,5 @@
 
 ## Empty State
 
-- Shown when a drill has no logged scores yet
+- Full empty state shown only when there is no handicap data AND no drill data
+- If handicap data exists but no drill data, drill section shows inline "Log drills" message

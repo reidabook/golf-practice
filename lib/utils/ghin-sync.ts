@@ -1,0 +1,94 @@
+import { sql } from '@/lib/db'
+
+const GHIN_API_BASE = 'https://api2.ghin.com/api/v1'
+const FIREBASE_API_KEY = 'AIzaSyBxgTOAWxiud0HuaE5tN-5NTlzFnrtyz-I'
+
+async function getFirebaseToken(): Promise<string> {
+  const res = await fetch(
+    'https://firebaseinstallations.googleapis.com/v1/projects/ghin-mobile-app/installations',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': FIREBASE_API_KEY,
+      },
+      body: JSON.stringify({
+        appId: '1:884417644529:web:47fb315bc6c70242f72650',
+        authVersion: 'FIS_v2',
+        fid: 'fg6JfS0U01YmrelthLX9Iz',
+        sdkVersion: 'w:0.5.7',
+      }),
+    }
+  )
+  if (!res.ok) throw new Error(`Firebase installation failed: ${res.status}`)
+  const data = await res.json()
+  return data.authToken.token as string
+}
+
+async function getGhinBearerToken(firebaseToken: string): Promise<string> {
+  const username = process.env.GHIN_USERNAME
+  const password = process.env.GHIN_PASSWORD
+  if (!username || !password) throw new Error('GHIN_USERNAME / GHIN_PASSWORD not configured')
+
+  const res = await fetch(`${GHIN_API_BASE}/golfer_login.json`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      token: firebaseToken,
+      user: { email_or_ghin: username, password },
+    }),
+  })
+  if (!res.ok) throw new Error(`GHIN login failed: ${res.status}`)
+  const data = await res.json()
+  return data.golfer_user.golfer_user_token as string
+}
+
+async function fetchGhinHandicap(bearerToken: string, ghinNumber: number): Promise<number> {
+  const res = await fetch(
+    `${GHIN_API_BASE}/search_golfer.json?ghin=${ghinNumber}&source=GHINcom`,
+    {
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+        source: 'GHINcom',
+      },
+    }
+  )
+  if (!res.ok) throw new Error(`GHIN search failed: ${res.status}`)
+  const data = await res.json()
+  // API may return golfers[] array or golfer singular
+  const golfer = data.golfers?.[0] ?? data.golfer
+  if (!golfer) throw new Error('Golfer not found in GHIN response')
+  return Number(golfer.handicap_index)
+}
+
+/**
+ * Fetches the current GHIN handicap index and stores it as today's snapshot.
+ * Skips silently if credentials aren't configured or a snapshot already exists today.
+ * Never throws — errors are logged and swallowed so the page still renders.
+ */
+export async function syncHandicapToday(): Promise<void> {
+  const ghinNumberStr = process.env.GHIN_NUMBER
+  if (!ghinNumberStr || !process.env.GHIN_USERNAME || !process.env.GHIN_PASSWORD) return
+
+  try {
+    const today = new Date().toISOString().split('T')[0]
+
+    // Skip if we already have today's snapshot
+    const existing = await sql`
+      SELECT 1 FROM handicap_snapshots WHERE snapshot_date = ${today} LIMIT 1
+    `
+    if (existing.length > 0) return
+
+    const firebaseToken = await getFirebaseToken()
+    const bearerToken = await getGhinBearerToken(firebaseToken)
+    const handicapIndex = await fetchGhinHandicap(bearerToken, Number(ghinNumberStr))
+
+    await sql`
+      INSERT INTO handicap_snapshots (snapshot_date, handicap_index)
+      VALUES (${today}, ${handicapIndex})
+      ON CONFLICT (snapshot_date) DO UPDATE SET handicap_index = EXCLUDED.handicap_index
+    `
+  } catch (err) {
+    console.error('[ghin-sync] Failed to sync handicap:', err)
+  }
+}
