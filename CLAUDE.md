@@ -25,9 +25,10 @@ This rule exists because the Supabase free plan has no self-serve backups. Data 
 
 **Before making ANY change to the app:**
 
-1. Read `FEATURES.md` to understand what currently exists.
+1. Read `FEATURES.md` for the index, then read the relevant file(s) in `features/` for the area being changed. Also read `features/shared.md` for any cross-cutting concerns.
 2. After making changes, verify that every feature touched or nearby still works as described.
 3. If a change will remove or alter an existing feature, call it out explicitly and get confirmation before proceeding.
+4. When a new feature is added or an existing one changes, update the relevant `features/*.md` file as part of the same commit.
 
 This rule exists because features have been silently lost during past edits.
 
