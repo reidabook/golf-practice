@@ -58,8 +58,13 @@ async function fetchGhinHandicap(bearerToken: string, ghinNumber: number): Promi
       },
     }
   )
-  if (!res.ok) throw new Error(`GHIN search failed: ${res.status}`)
+  if (!res.ok) {
+    const body = await res.text().catch(() => '(unreadable)')
+    console.error('[ghin-sync] Search response body:', body)
+    throw new Error(`GHIN search failed: ${res.status}`)
+  }
   const data = await res.json()
+  console.log('[ghin-sync] Search response:', JSON.stringify(data).slice(0, 500))
   // API may return golfers[] array or golfer singular
   const golfer = data.golfers?.[0] ?? data.golfer
   if (!golfer) throw new Error('Golfer not found in GHIN response')
