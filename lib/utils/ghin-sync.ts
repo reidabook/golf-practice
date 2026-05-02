@@ -50,6 +50,11 @@ async function getGhinHandicapFromLogin(firebaseToken: string): Promise<number> 
   const golfers: any[] = golferUser?.golfers ?? []
   const golfer = golfers[0] ?? golferUser
 
+  console.log('[ghin-sync] golfers length:', golfers.length)
+  if (golfers.length > 0) {
+    console.log('[ghin-sync] golfers[0] keys:', Object.keys(golfers[0]).join(', '))
+  }
+
   const handicap = golfer?.handicap_index ?? golfer?.hi ?? golfer?.HandicapIndex
   console.log('[ghin-sync] Extracted handicap:', handicap)
   if (handicap == null) throw new Error('Handicap index not found in login response')
