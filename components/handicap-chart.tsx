@@ -95,7 +95,7 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
                 if (key === 'trend') return []
                 return [val.toFixed(1), 'Handicap Index']
               }}
-              labelFormatter={(label, payload) => {
+              labelFormatter={(label, payload: any[]) => {
                 const item = payload?.[0]?.payload
                 return item ? item.date : label
               }}
