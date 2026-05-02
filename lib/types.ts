@@ -116,3 +116,10 @@ export interface BlockBoundary {
   blockId: string
   blockName: string
 }
+
+// Handicap tracking
+
+export interface HandicapSnapshot {
+  snapshot_date: string  // YYYY-MM-DD
+  handicap_index: number
+}

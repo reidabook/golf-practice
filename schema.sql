@@ -135,6 +135,25 @@ CREATE POLICY "public_all" ON block_template_drills FOR ALL USING (true) WITH CH
 CREATE POLICY "public_all" ON training_blocks       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "public_all" ON drill_logs            FOR ALL USING (true) WITH CHECK (true);
 
+-- =====================
+-- HANDICAP TRACKING
+-- Run in Supabase SQL editor (safe — non-destructive)
+-- =====================
+
+CREATE TABLE IF NOT EXISTS handicap_snapshots (
+  id             SERIAL PRIMARY KEY,
+  snapshot_date  DATE NOT NULL UNIQUE,
+  handicap_index NUMERIC(4,1) NOT NULL,
+  fetched_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_handicap_snapshots_date
+  ON handicap_snapshots(snapshot_date);
+
+ALTER TABLE handicap_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_all" ON handicap_snapshots FOR ALL USING (true) WITH CHECK (true);
+
+-- =====================
 -- Link all 6 drills to the Break 90 template (in order)
 DO $$
 DECLARE
