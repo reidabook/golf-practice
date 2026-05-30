@@ -1,32 +1,42 @@
 import { sql } from '@/lib/db'
 import type { ActiveBlockInfo, BlockWithDayLogs, TrainingBlock, Drill } from '@/lib/types'
 
+async function fetchBlockInfo(block: TrainingBlock): Promise<ActiveBlockInfo> {
+  const [statsRows, templateDrillRows] = await Promise.all([
+    sql`
+      SELECT
+        COUNT(*) FILTER (WHERE skipped = false AND score IS NOT NULL) AS completed_drills,
+        COUNT(*) FILTER (WHERE log_date = CURRENT_DATE AND skipped = false AND score IS NOT NULL) AS todays_drill_count
+      FROM drill_logs
+      WHERE block_id = ${block.id}
+    `,
+    sql`
+      SELECT COUNT(*) AS drill_count
+      FROM block_template_drills
+      WHERE template_id = ${block.template_id}
+    `,
+  ])
+  const completed_drills = Number(statsRows[0]?.completed_drills ?? 0)
+  const todays_drill_count = Number(statsRows[0]?.todays_drill_count ?? 0)
+  const template_drill_count = Number(templateDrillRows[0]?.drill_count ?? 0)
+  const total_drills = template_drill_count * block.target_days
+  return { block, completed_drills, total_drills, todays_drill_count }
+}
+
+export async function getActiveBlocks(): Promise<ActiveBlockInfo[]> {
+  const blockRows = await sql`
+    SELECT * FROM training_blocks WHERE status = 'active' ORDER BY started_at DESC
+  `
+  if (blockRows.length === 0) return []
+  return Promise.all((blockRows as unknown as TrainingBlock[]).map(fetchBlockInfo))
+}
+
 export async function getActiveBlock(): Promise<ActiveBlockInfo | null> {
   const blockRows = await sql`
     SELECT * FROM training_blocks WHERE status = 'active' ORDER BY started_at DESC LIMIT 1
   `
   if (!blockRows[0]) return null
-  const block = blockRows[0] as TrainingBlock
-
-  const statsRows = await sql`
-    SELECT
-      COUNT(*) FILTER (WHERE skipped = false AND score IS NOT NULL) AS completed_drills,
-      COUNT(*) FILTER (WHERE log_date = CURRENT_DATE AND skipped = false AND score IS NOT NULL) AS todays_drill_count
-    FROM drill_logs
-    WHERE block_id = ${block.id}
-  `
-  const completed_drills = Number(statsRows[0]?.completed_drills ?? 0)
-  const todays_drill_count = Number(statsRows[0]?.todays_drill_count ?? 0)
-
-  const templateDrillRows = await sql`
-    SELECT COUNT(*) AS drill_count
-    FROM block_template_drills
-    WHERE template_id = ${block.template_id}
-  `
-  const template_drill_count = Number(templateDrillRows[0]?.drill_count ?? 0)
-  const total_drills = template_drill_count * block.target_days
-
-  return { block, completed_drills, total_drills, todays_drill_count }
+  return fetchBlockInfo(blockRows[0] as TrainingBlock)
 }
 
 export async function getBlocks(): Promise<TrainingBlock[]> {

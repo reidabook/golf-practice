@@ -11,11 +11,6 @@ export async function startBlock(templateId: string): Promise<void> {
   if (!templateRows[0]) throw new Error('Template not found')
   const template = templateRows[0] as { name: string; target_days: number }
 
-  const activeRows = await sql`
-    SELECT id FROM training_blocks WHERE status = 'active' LIMIT 1
-  `
-  if (activeRows[0]) throw new Error('A block is already active. Complete it first.')
-
   const blockRows = await sql`
     INSERT INTO training_blocks (template_id, name, target_days)
     VALUES (${templateId}, ${template.name}, ${template.target_days})

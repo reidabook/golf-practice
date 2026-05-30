@@ -4,15 +4,19 @@
 
 ---
 
-## No Active Block
+## Layout (always rendered together)
 
-- List of available block templates (name, description, target days, Default badge)
-- One-click start for any template
-- Empty state with link to create templates if none exist
+### Active Blocks section
+- Shown only when one or more blocks have `status = 'active'`
+- Each active block renders as a card: name, "Started [date]", drill progress bar ("X of Y drills / Z remaining"), today's drill count, "Open Training" button → `/blocks/[blockId]/drills`
+- Multiple active blocks stack vertically
 
-## Active Block
+### Start a Training Block section
+- Always visible regardless of whether blocks are active
+- Lists all templates (name, description, target days, Default badge)
+- One-click start for any template — creates a new active block and navigates to its drill scoring page
+- Empty state with link to `/drills` if no templates exist
 
-- Block name and "Started [date]"
-- Visual progress bar with "X of Y drills" and "Z remaining"
-- Count of drills already scored today
-- "Open Training" button linking to drill scoring wizard (`/blocks/[blockId]/drills`)
+## Notes
+- Multiple blocks can be active simultaneously; there is no single-active constraint
+- `getActiveBlocks()` (plural) is used on this page — not `getActiveBlock()`
