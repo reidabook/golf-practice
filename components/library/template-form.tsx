@@ -62,8 +62,8 @@ export function TemplateForm({ template, drills, onSave, onClose, isPending }: T
   const unselectedDrills = drills.filter((d) => !selectedIds.includes(d.id))
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
-      <div className="bg-background w-full max-w-lg rounded-t-2xl border-t border-border max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[60] bg-black/60 flex items-end justify-center overflow-hidden">
+      <div className="bg-background w-full max-w-lg rounded-t-2xl border-t border-border max-h-[90vh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between px-4 py-4 border-b border-border">
           <h2 className="font-semibold">{template ? 'Edit Template' : 'New Template'}</h2>
           <button onClick={onClose} className="p-1 rounded hover:bg-accent">
