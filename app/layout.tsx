@@ -4,6 +4,7 @@ import './globals.css'
 import { BottomNav } from '@/components/nav/bottom-nav'
 import { Toaster } from 'sonner'
 import { SwRegister } from '@/components/sw-register'
+import { DrillRouteWatcher } from '@/components/scoring/drill-route-watcher'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <BottomNav />
         <Toaster position="top-center" richColors />
         <SwRegister />
+        <DrillRouteWatcher />
       </body>
     </html>
   )
