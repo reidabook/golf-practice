@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { HandicapSnapshot } from '@/lib/types'
 
 const HandicapChart = dynamic(
-  () => import('@/components/handicap-chart').then((m) => m.HandicapChart),
+  () => import('@/components/progress/handicap-chart').then((m) => m.HandicapChart),
   {
     ssr: false,
     loading: () => <Skeleton className="h-48 w-full" />,

@@ -23,8 +23,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Plus, Pencil, Trash2, LineChart, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { DrillForm } from '@/components/drill-form'
-import { TemplateForm } from '@/components/template-form'
+import { DrillForm } from '@/components/library/drill-form'
+import { TemplateForm } from '@/components/library/template-form'
 
 interface DrillsPageClientProps {
   drills: Drill[]

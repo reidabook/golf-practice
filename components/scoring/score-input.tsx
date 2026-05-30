@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Numpad } from '@/components/numpad'
+import { Numpad } from '@/components/scoring/numpad'
 import { clampScore } from '@/lib/utils'
 import type { Drill } from '@/lib/types'
 import { Minus, Plus } from 'lucide-react'

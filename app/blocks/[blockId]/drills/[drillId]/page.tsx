@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getBlock } from '@/lib/queries/blocks'
 import { getBlockDrills } from '@/lib/queries/drill-logs'
-import { DrillScoringClient } from '@/components/drill-scoring-client'
+import { DrillScoringClient } from '@/components/scoring/scoring-client'
 
 interface Props {
   params: Promise<{ blockId: string; drillId: string }>

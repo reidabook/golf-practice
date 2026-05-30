@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { TrainingBlock, BlockDrillItem, DrillComparison } from '@/lib/types'
 import { saveDrillLog, skipDrillLog } from '@/lib/actions/drill-logs'
-import { ScoreInput } from '@/components/score-input'
-import { DrillComparisonOverlay } from '@/components/drill-comparison-overlay'
+import { ScoreInput } from '@/components/scoring/score-input'
+import { DrillComparisonOverlay } from '@/components/scoring/comparison-overlay'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 
@@ -19,16 +19,41 @@ export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringCl
   const router = useRouter()
   const { drill } = drillItem
   const defaultScore = drill.min_score ?? 0
+  const draftKey = `drill-draft-${blockId}-${drill.id}`
 
-  const [score, setScore] = useState<number>(
-    drillItem.last_score !== null ? drillItem.last_score : defaultScore
-  )
+  const [score, setScore] = useState<number>(defaultScore)
   const [saving, setSaving] = useState(false)
   const [skipping, setSkipping] = useState(false)
   const [comparison, setComparison] = useState<DrillComparison | null>(null)
 
+  // On mount: restore the in-progress draft so state survives phone locks / app switches.
+  // Skip restoration if the drill was already scored today — that would be showing stale data.
+  useEffect(() => {
+    if (drillItem.done_today) {
+      localStorage.removeItem(draftKey)
+      return
+    }
+    const saved = localStorage.getItem(draftKey)
+    if (saved !== null) {
+      const parsed = parseFloat(saved)
+      if (!isNaN(parsed)) setScore(parsed)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Intentional empty deps — runs once on mount; draftKey and done_today are stable per page
+
+  // Persist score changes to localStorage while actively scoring (not when overlay is up).
+  useEffect(() => {
+    if (comparison !== null) return
+    localStorage.setItem(draftKey, String(score))
+  }, [draftKey, score, comparison])
+
+  function clearDraft() {
+    localStorage.removeItem(draftKey)
+  }
+
   async function handleSave() {
     setSaving(true)
+    clearDraft()
     const result = await saveDrillLog(blockId, drill.id, score)
     setComparison(result.comparison)
     setSaving(false)
@@ -36,6 +61,7 @@ export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringCl
 
   async function handleSkip() {
     setSkipping(true)
+    clearDraft()
     await skipDrillLog(blockId, drill.id)
     router.push(`/blocks/${blockId}/drills`)
   }
