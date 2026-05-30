@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { getDrills } from '@/lib/queries/drills'
 import { getTemplates } from '@/lib/queries/templates'
-import { DrillsPageClient } from '@/components/drills-page-client'
+import { DrillsPageClient } from '@/components/library/drills-page-client'
 
 export default async function DrillsPage() {
   const [drills, templates] = await Promise.all([getDrills(), getTemplates()])

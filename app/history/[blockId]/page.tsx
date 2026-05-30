@@ -4,7 +4,7 @@ import { getBlock } from '@/lib/queries/blocks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { BlockCompletionSummary } from '@/components/block-completion-summary'
+import { BlockCompletionSummary } from '@/components/history/block-completion-summary'
 import { formatDate, formatScoreWithUnit } from '@/lib/utils'
 
 export default async function BlockDetailPage({

@@ -3,8 +3,8 @@ export const dynamic = 'force-dynamic'
 import { getProgressForAllDrills } from '@/lib/queries/progress'
 import { getHandicapHistory } from '@/lib/queries/handicap'
 import { syncHandicapToday } from '@/lib/utils/ghin-sync'
-import { ProgressChartClient } from '@/components/progress-chart-client'
-import { HandicapChartClient } from '@/components/handicap-chart-client'
+import { ProgressChartClient } from '@/components/progress/progress-chart-client'
+import { HandicapChartClient } from '@/components/progress/handicap-chart-client'
 
 export default async function ProgressPage() {
   const [syncResult, drillProgress, handicapHistory] = await Promise.all([

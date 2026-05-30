@@ -48,9 +48,9 @@ Columns: `id, name, unit, scoring_direction, category, description, source, is_d
 | Operation | File |
 |---|---|
 | Read all | `lib/queries/drills.ts → getDrills()` ← `app/drills/page.tsx` |
-| Create / Update / Delete | `lib/actions/drills.ts` ← `components/drills-page-client.tsx` |
+| Create / Update / Delete | `lib/actions/drills.ts` ← `components/library/components/library/drills-page-client.tsx` |
 
-**If you add a column:** update `getDrills()` query, drill form in `components/drill-form.tsx`, and any display in `drill-scoring-client.tsx`.
+**If you add a column:** update `getDrills()` query, drill form in `components/library/drill-form.tsx`, and any display in `components/scoring/scoring-client.tsx`.
 
 ---
 
@@ -60,7 +60,7 @@ Columns: `id, name, description, target_days, is_default` / `template_id, drill_
 | Operation | File |
 |---|---|
 | Read all | `lib/queries/templates.ts → getTemplates()` ← `app/page.tsx`, `app/drills/page.tsx` |
-| Create / Update / Delete | `lib/actions/templates.ts` ← `components/drills-page-client.tsx` |
+| Create / Update / Delete | `lib/actions/templates.ts` ← `components/library/components/library/drills-page-client.tsx` |
 
 **If you change template structure:** `getTemplates()` is the single read path — update it and callers cascade.
 
@@ -86,12 +86,12 @@ This is the core of the day-based model. One row per drill per day (or per attem
 
 | Operation | File |
 |---|---|
-| Read today's logs | `lib/queries/drill-logs.ts → getTodayLogs(blockId)` ← drill scoring pages |
+| Read today's logs | `lib/queries/drill-logs.ts → getBlockDrills(blockId)` ← drill scoring pages |
 | Read for comparison | `lib/queries/drill-logs.ts → getDrillComparison(blockId, drillId, score)` |
 | Read for progress charts | `lib/queries/progress.ts → getProgressForAllDrills()` ← `app/progress/page.tsx` |
-| Save score (in-block) | `lib/actions/drill-logs.ts → saveDrillLog(blockId, drillId, score)` ← `drill-scoring-client.tsx` |
-| Skip drill (in-block) | `lib/actions/drill-logs.ts → skipDrillLog(blockId, drillId)` ← `drill-scoring-client.tsx` |
-| Log ad-hoc (no block) | `lib/actions/drill-logs.ts → logDrillScore(drillId, score, date?)` ← `drills-page-client.tsx` |
+| Save score (in-block) | `lib/actions/drill-logs.ts → saveDrillLog(blockId, drillId, score)` ← `components/scoring/scoring-client.tsx` |
+| Skip drill (in-block) | `lib/actions/drill-logs.ts → skipDrillLog(blockId, drillId)` ← `components/scoring/scoring-client.tsx` |
+| Log ad-hoc (no block) | `lib/actions/drill-logs.ts → logDrillScore(drillId, score, date?)` ← `components/library/drills-page-client.tsx` |
 
 **If you add a column:** update INSERT statements in all three actions above and SELECT in the query files.
 
@@ -102,9 +102,9 @@ This is the core of the day-based model. One row per drill per day (or per attem
 | Action | Exported functions | Used by |
 |---|---|---|
 | `lib/actions/blocks.ts` | `startBlock`, `completeBlock` | `app/page.tsx`, block detail pages |
-| `lib/actions/drill-logs.ts` | `saveDrillLog`, `skipDrillLog`, `logDrillScore` | `drill-scoring-client.tsx`, `drills-page-client.tsx` |
-| `lib/actions/drills.ts` | `createDrill`, `updateDrill`, `deleteDrill` | `drills-page-client.tsx` |
-| `lib/actions/templates.ts` | `createTemplate`, `updateTemplate`, `deleteTemplate` | `drills-page-client.tsx` |
+| `lib/actions/drill-logs.ts` | `saveDrillLog`, `skipDrillLog`, `logDrillScore` | `components/scoring/scoring-client.tsx`, `components/library/drills-page-client.tsx` |
+| `lib/actions/drills.ts` | `createDrill`, `updateDrill`, `deleteDrill` | `components/library/drills-page-client.tsx` |
+| `lib/actions/templates.ts` | `createTemplate`, `updateTemplate`, `deleteTemplate` | `components/library/drills-page-client.tsx` |
 
 All actions call `revalidatePath()` to invalidate the relevant server component cache after mutations.
 
@@ -115,7 +115,7 @@ All actions call `revalidatePath()` to invalidate the relevant server component 
 | Query file | Functions | Used by |
 |---|---|---|
 | `lib/queries/blocks.ts` | `getActiveBlock`, `getBlocks`, `getBlock` | home, history, block detail pages |
-| `lib/queries/drill-logs.ts` | `getTodayLogs`, `getDrillComparison` | drill scoring pages |
+| `lib/queries/drill-logs.ts` | `getBlockDrills`, `getDrillComparison` | drill scoring pages |
 | `lib/queries/drills.ts` | `getDrills` | drills page |
 | `lib/queries/progress.ts` | `getProgressForAllDrills` | progress page |
 | `lib/queries/templates.ts` | `getTemplates` | home page (template picker), drills page |
@@ -126,31 +126,31 @@ All actions call `revalidatePath()` to invalidate the relevant server component 
 
 ### "Day as session"
 There are no `sessions`. A "day of practice" = all `drill_logs` rows with the same `log_date` for a block.
-- `lib/queries/drill-logs.ts → getTodayLogs(blockId)` returns today's already-scored drills
+- `lib/queries/drill-logs.ts → getBlockDrills(blockId)` returns today's already-scored drills
 - `app/blocks/[blockId]/drills/page.tsx` uses this to show which drills still need scoring today
 - Progress page groups by `log_date` to show per-day chart points
 
 ### "Block completion flow"
 A block ends when all template drills have at least one non-skipped log entry.
 - Manual trigger: `completeBlock()` server action
-- Display: `app/history/[blockId]/page.tsx` + `components/block-completion-summary.tsx`
+- Display: `app/history/[blockId]/page.tsx` + `components/history/block-completion-summary.tsx`
 
 ### "Drill scoring flow"
 `/` → `/blocks/:blockId/drills` → `/blocks/:blockId/drills/:drillId` (×N) → back to `/`
-- `drill-scoring-client.tsx` owns scoring UI state and calls `saveDrillLog` / `skipDrillLog`
+- `components/scoring/scoring-client.tsx` owns scoring UI state and calls `saveDrillLog` / `skipDrillLog`
 - After save, shows `drill-comparison-overlay.tsx` with performance vs history
 - `revalidatePath` in action refreshes server component cache when returning to home
 
 ### "Scoring direction"
 Each drill has `scoring_direction: 'higher_better' | 'lower_better'`.
-- Read by: `app/progress/page.tsx` (chart label), `components/drill-comparison-overlay.tsx` (trend color)
+- Read by: `app/progress/page.tsx` (chart label), `components/scoring/comparison-overlay.tsx` (trend color)
 - **To add a new direction:** update both display sites.
 
 ### "Progress charts"
 Recharts is client-side only (SSR-incompatible). Pattern used:
 - `app/progress/page.tsx` is a server component — fetches data, passes to `ProgressChartClient`
-- `components/progress-chart-client.tsx` is `'use client'` — uses `dynamic()` with `ssr: false`
-- `components/progress-chart.tsx` is the actual Recharts component
+- `components/progress/progress-chart-client.tsx` is `'use client'` — uses `dynamic()` with `ssr: false`
+- `components/progress/progress-chart.tsx` is the actual Recharts component
 
 ### "Ad-hoc score logging"
 The `/drills` page allows logging a score for any drill without being in a training block.
@@ -164,10 +164,9 @@ The `/drills` page allows logging a score for any drill without being in a train
 | Component | Used by |
 |---|---|
 | `components/nav/bottom-nav.tsx` | `app/layout.tsx` |
-| `components/score-input.tsx` | `components/drill-scoring-client.tsx` |
-| `components/numpad.tsx` | `components/score-input.tsx` |
-| `components/drill-instructions.tsx` | `components/drill-scoring-client.tsx` |
-| `components/drill-comparison-overlay.tsx` | `components/drill-scoring-client.tsx` |
+| `components/scoring/score-input.tsx` | `components/scoring/scoring-client.tsx` |
+| `components/scoring/numpad.tsx` | `components/scoring/score-input.tsx` |
+| `components/scoring/comparison-overlay.tsx` | `components/scoring/scoring-client.tsx` |
 | `components/ui/*` | everywhere |
 
 ---

@@ -19,7 +19,7 @@ export function DrillComparisonOverlay({ comparison, onDismiss }: DrillCompariso
   const config = trendConfig[comparison.trend]
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6">
+    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6">
       <div className="flex flex-col items-center gap-4 text-center">
         <span className={`text-5xl ${config.color}`}>{config.icon}</span>
         <p className={`text-xl font-semibold ${config.color}`}>{config.label}</p>
@@ -45,7 +45,7 @@ export function DrillComparisonOverlay({ comparison, onDismiss }: DrillCompariso
         )}
       </div>
 
-      <div className="absolute bottom-8 w-full px-6">
+      <div className="absolute bottom-0 w-full px-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
         <Button onClick={onDismiss} className="w-full" size="lg">
           Back to Drills
         </Button>

@@ -27,6 +27,7 @@ export async function saveDrillLog(
   }
 
   revalidatePath(`/blocks/${blockId}/drills`)
+  revalidatePath(`/blocks/${blockId}/drills/${drillId}`)
   revalidatePath('/progress')
 
   const comparison = await getDrillComparison(blockId, drillId, score)
