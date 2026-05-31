@@ -9,11 +9,11 @@ export async function startBlock(templateId: string): Promise<void> {
     SELECT * FROM block_templates WHERE id = ${templateId}
   `
   if (!templateRows[0]) throw new Error('Template not found')
-  const template = templateRows[0] as { name: string; target_days: number }
+  const template = templateRows[0] as { name: string; target_sessions: number }
 
   const blockRows = await sql`
-    INSERT INTO training_blocks (template_id, name, target_days)
-    VALUES (${templateId}, ${template.name}, ${template.target_days})
+    INSERT INTO training_blocks (template_id, name, target_sessions)
+    VALUES (${templateId}, ${template.name}, ${template.target_sessions})
     RETURNING id
   `
   const blockId = blockRows[0].id as string
@@ -31,6 +31,27 @@ export async function completeBlock(blockId: string): Promise<void> {
   revalidatePath('/')
   revalidatePath(`/history/${blockId}`)
   redirect(`/history/${blockId}`)
+}
+
+export async function endBlockEarly(blockId: string): Promise<void> {
+  await sql`
+    UPDATE training_blocks
+    SET status = 'ended_early', completed_at = now()
+    WHERE id = ${blockId}
+  `
+  revalidatePath('/')
+  revalidatePath(`/history/${blockId}`)
+  redirect('/')
+}
+
+export async function extendBlock(blockId: string, additionalSessions: number): Promise<void> {
+  await sql`
+    UPDATE training_blocks
+    SET target_sessions = target_sessions + ${additionalSessions}
+    WHERE id = ${blockId}
+  `
+  revalidatePath('/')
+  revalidatePath(`/blocks/${blockId}/drills`)
 }
 
 export async function deleteBlock(blockId: string): Promise<void> {

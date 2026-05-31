@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS block_templates (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT NOT NULL,
   description  TEXT,
-  target_days  INTEGER NOT NULL DEFAULT 8,
+  target_sessions  INTEGER NOT NULL DEFAULT 8,
   is_default   BOOLEAN NOT NULL DEFAULT false,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS training_blocks (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_id  UUID REFERENCES block_templates(id) ON DELETE SET NULL,
   name         TEXT NOT NULL,
-  target_days  INTEGER NOT NULL,
-  status       TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed')),
+  target_sessions  INTEGER NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'ended_early')),
   started_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   completed_at TIMESTAMPTZ
 );
@@ -109,7 +109,7 @@ VALUES
   )
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO block_templates (name, description, target_days, is_default)
+INSERT INTO block_templates (name, description, target_sessions, is_default)
 VALUES (
   'Break 90 Program',
   'An 8-day program designed to help you break 90 by building fundamentals across putting, short game, and course management.',

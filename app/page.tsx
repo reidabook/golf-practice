@@ -85,7 +85,7 @@ export default async function Home() {
                       {t.description && (
                         <p className="text-sm text-muted-foreground mt-0.5">{t.description}</p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-1">{t.target_days} days</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t.target_sessions} sessions</p>
                     </div>
                     {t.is_default && <Badge variant="secondary">Default</Badge>}
                   </div>

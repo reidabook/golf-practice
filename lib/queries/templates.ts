@@ -15,7 +15,7 @@ export async function getTemplates(): Promise<BlockTemplate[]> {
       d.created_at AS drill_created_at
     FROM block_template_drills btd
     JOIN drills d ON d.id = btd.drill_id
-    ORDER BY btd.sort_order ASC
+    ORDER BY btd.template_id, btd.sort_order ASC
   `
 
   const drillsByTemplate = new Map<string, TemplateDrill[]>()
