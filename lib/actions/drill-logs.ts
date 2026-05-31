@@ -3,6 +3,7 @@
 import { sql } from '@/lib/db'
 import { revalidatePath } from 'next/cache'
 import { getDrillComparison } from '@/lib/queries/drill-logs'
+import { isBlockComplete } from '@/lib/queries/blocks'
 import type { DrillSaveResult } from '@/lib/types'
 
 export async function saveDrillLog(
@@ -30,8 +31,12 @@ export async function saveDrillLog(
   revalidatePath(`/blocks/${blockId}/drills/${drillId}`)
   revalidatePath('/progress')
 
-  const comparison = await getDrillComparison(blockId, drillId, score)
-  return { log, comparison }
+  const [comparison, blockComplete] = await Promise.all([
+    getDrillComparison(blockId, drillId, score),
+    isBlockComplete(blockId),
+  ])
+
+  return { log, comparison, blockComplete }
 }
 
 export async function skipDrillLog(blockId: string, drillId: string): Promise<void> {
@@ -42,7 +47,6 @@ export async function skipDrillLog(blockId: string, drillId: string): Promise<vo
   revalidatePath(`/blocks/${blockId}/drills`)
 }
 
-// Ad-hoc log from the Drills library page (no block context)
 export async function logDrillScore(
   drillId: string,
   score: number,

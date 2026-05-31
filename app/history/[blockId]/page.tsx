@@ -34,12 +34,12 @@ export default async function BlockDetailPage({
           {block.completed_at && ` → ${formatDate(block.completed_at)}`}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {totalDays} of {block.target_days} days logged
+          {totalDays} day{totalDays !== 1 ? 's' : ''} logged · {block.target_sessions} session target
         </p>
       </div>
 
       {/* Completion summary for finished blocks with ≥2 days */}
-      {block.status === 'completed' && block.day_logs.length >= 2 && (
+      {(block.status === 'completed' || block.status === 'ended_early') && block.day_logs.length >= 2 && (
         <BlockCompletionSummary block={block} />
       )}
 

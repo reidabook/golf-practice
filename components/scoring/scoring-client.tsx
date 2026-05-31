@@ -6,6 +6,7 @@ import type { TrainingBlock, BlockDrillItem, DrillComparison } from '@/lib/types
 import { saveDrillLog, skipDrillLog } from '@/lib/actions/drill-logs'
 import { ScoreInput } from '@/components/scoring/score-input'
 import { DrillComparisonOverlay } from '@/components/scoring/comparison-overlay'
+import { BlockCompletionScreen } from '@/components/scoring/block-completion-screen'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 
@@ -22,14 +23,16 @@ export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringCl
   // (e.g. Safe Side Drill has min_score=-30 but should open at 0)
   const defaultScore = Math.max(0, drill.min_score ?? 0)
   const draftKey = `drill-draft-${blockId}-${drill.id}`
+  // Completion is dismissed per-session so "Keep Going" doesn't re-trigger on every save
+  const completionDismissKey = `block-complete-dismissed-${blockId}`
 
   const [score, setScore] = useState<number>(defaultScore)
   const [saving, setSaving] = useState(false)
   const [skipping, setSkipping] = useState(false)
   const [comparison, setComparison] = useState<DrillComparison | null>(null)
+  const [showCompletionScreen, setShowCompletionScreen] = useState(false)
 
-  // On mount: restore the in-progress draft so state survives phone locks / app switches.
-  // Skip restoration if the drill was already scored today — that would be showing stale data.
+  // On mount: restore draft if drill wasn't scored today; clear stale draft if it was.
   useEffect(() => {
     if (drillItem.done_today) {
       localStorage.removeItem(draftKey)
@@ -41,9 +44,9 @@ export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringCl
       if (!isNaN(parsed)) setScore(parsed)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Intentional empty deps — runs once on mount; draftKey and done_today are stable per page
+  }, [])
 
-  // Persist score changes to localStorage while actively scoring (not when overlay is up).
+  // Persist score to localStorage while actively scoring (not when overlay is up).
   useEffect(() => {
     if (comparison !== null) return
     localStorage.setItem(draftKey, String(score))
@@ -58,6 +61,11 @@ export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringCl
     clearDraft()
     const result = await saveDrillLog(blockId, drill.id, score)
     setComparison(result.comparison)
+    // Show completion screen only if: block just became complete AND user hasn't
+    // dismissed it this session (via "Keep Going").
+    if (result.blockComplete && !sessionStorage.getItem(completionDismissKey)) {
+      setShowCompletionScreen(true)
+    }
     setSaving(false)
   }
 
@@ -69,7 +77,26 @@ export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringCl
   }
 
   function handleDismiss() {
+    if (showCompletionScreen) return // already showing completion
     router.push(`/blocks/${blockId}/drills`)
+  }
+
+  function handleKeepGoing() {
+    // Suppress further completion prompts for this block this session
+    sessionStorage.setItem(completionDismissKey, '1')
+    setShowCompletionScreen(false)
+    router.push(`/blocks/${blockId}/drills`)
+  }
+
+  if (showCompletionScreen) {
+    return (
+      <BlockCompletionScreen
+        blockId={blockId}
+        blockName={block.name}
+        targetSessions={block.target_sessions}
+        onKeepGoing={handleKeepGoing}
+      />
+    )
   }
 
   if (comparison) {
@@ -116,7 +143,7 @@ export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringCl
         </div>
       )}
 
-      {/* Score input — centered vertically in remaining space */}
+      {/* Score input */}
       <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
         <ScoreInput drill={drill} value={score} onChange={setScore} />
       </div>

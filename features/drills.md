@@ -6,13 +6,13 @@
 
 ## Block Templates Section
 
-- List of templates: name, description, target days, Default badge
+- List of templates: name, description, target sessions, Default badge
 - Edit (pencil icon) and Delete (with confirmation dialog) per template
 - "+ New" button opens template form
 - Empty state when no templates
 
 ### Template Form (modal)
-- Fields: name (required), description, target days (1–52, required)
+- Fields: name (required), description, number of sessions (1–52, required)
 - Drill selector: available drills list + selected drills list
 - Selected drills are drag-to-reorderable (grip icon)
 - Toggle to add/remove drills between lists
@@ -51,12 +51,14 @@
 
 ## Drill Scoring Wizard (`/blocks/[blockId]/drills`)
 
-- Block name + total drill count + count completed today in header
+- Block name header
 - Two sections: "Up Next" (not yet scored today) and "Done Today"
-- Per-drill row: name, unit, last score, scoring direction badge, "Done" badge if complete
-- Clicking a row opens the single drill scorer
-- **Mark Complete** button — marks block as finished
-- **Delete** button — confirmation dialog; removes block and all associated drill logs permanently
+- Per-drill row: name, unit, last score, session progress (`X/Y sessions`), and badges:
+  - If drill has reached target_sessions: green ✓ Complete badge (row slightly muted)
+  - Otherwise: scoring direction badge + "Today" badge if done_today
+- Drills that reached target_sessions are still tappable — extra completions don't count toward block target
+- Bottom action bar: **Mark Complete**, **End Early** (with confirmation), **Delete** (with confirmation)
+  - **End Early** sets status to `ended_early`, removes block from active list, keeps drill logs
 
 ## Single Drill Scorer (`/blocks/[blockId]/drills/[drillId]`)
 
@@ -67,7 +69,7 @@
 - Last score reference for this drill in this block (if exists)
 
 ### Score Input
-- Large score display (7xl monospaced font)
+- Large score display (7xl monospaced font), defaults to 0 (not min_score)
 - Decrease / Increase buttons — disabled at min/max bounds
 - Tap display to open numpad:
   - Digits 0–9, backspace, minus (for negative scores)
@@ -76,16 +78,19 @@
 - Haptic feedback (vibrate API) when hitting min or max bounds
 
 ### Actions
-- **"Save Score"** — logs the score, then shows comparison overlay
+- **"Save Score"** — logs the score, then shows comparison overlay; if block becomes complete, shows block completion screen after overlay is dismissed
 - **"Skip Drill"** — marks drill as skipped for today, returns to drill list
 
 ### Score Comparison Overlay (shown after Save)
-- Trend indicator with label:
-  - ↑ Improved (green)
-  - ↓ Declined (red)
-  - → Same (yellow)
-  - ★ First Entry (blue)
+- Trend indicator with label: ↑ Improved / ↓ Declined / → Same / ★ First Entry
 - Current score in large font + unit
 - Previous score and personal best shown (if not first entry)
-- "Nothing to compare yet — keep going!" message (if first entry)
-- Back to Drills button
+- Back to Drills button (or block completion screen if block just finished)
+
+### Block Completion Screen (shown when block is complete)
+- Shown after the comparison overlay is dismissed if all drills have reached target_sessions
+- Suppressed for the rest of the session if user previously clicked "Keep Going"
+- Three options:
+  - **Complete Block** — marks status `completed`, redirects to history
+  - **Extend Block** — prompts for additional sessions to add to target_sessions, then continues
+  - **Keep Going** — dismisses, block stays active (won't re-trigger this session)

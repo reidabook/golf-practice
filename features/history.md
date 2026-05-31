@@ -6,7 +6,7 @@
 
 ## List Screen
 
-- One card per block: name, status badge (Done / Active), start/end dates, target duration
+- One card per block: name, status badge (Done / Ended Early / Active), start/end dates, session target
 - Empty state when no history
 - Clickable to view block detail
 
@@ -14,10 +14,10 @@
 
 - Breadcrumb navigation back to History
 - Block name and date range
-- "X of Y days logged" progress
+- Days logged + session target
 
-### Block Completion Summary
-- Shown only for completed blocks with 2+ days logged
+### Block Summary
+- Shown for completed or ended-early blocks with 2+ days logged
 - Per-drill: first vs last score, trend indicator (↑ ↓ → ★), personal best
 - Colored trend badge: green (improved), red (declined), yellow (same), blue (first entry)
 

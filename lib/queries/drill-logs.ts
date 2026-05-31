@@ -21,6 +21,14 @@ export async function getBlockDrills(blockId: string): Promise<BlockDrillItem[]>
         AND dl.skipped = false
         AND dl.score IS NOT NULL
       ORDER BY dl.drill_id, dl.log_date DESC, dl.created_at DESC
+    ),
+    session_counts AS (
+      SELECT drill_id, COUNT(*) AS session_count
+      FROM drill_logs
+      WHERE block_id = ${blockId}
+        AND skipped = false
+        AND score IS NOT NULL
+      GROUP BY drill_id
     )
     SELECT
       d.id,
@@ -35,12 +43,14 @@ export async function getBlockDrills(blockId: string): Promise<BlockDrillItem[]>
       d.created_at,
       btd.sort_order,
       CASE WHEN td.drill_id IS NOT NULL THEN true ELSE false END AS done_today,
+      COALESCE(sc.session_count, 0) AS session_count,
       ls.last_score,
       ls.last_log_date
     FROM block_template_drills btd
     JOIN training_blocks tb ON tb.id = ${blockId}
     JOIN drills d ON d.id = btd.drill_id
     LEFT JOIN today_done td ON td.drill_id = d.id
+    LEFT JOIN session_counts sc ON sc.drill_id = d.id
     LEFT JOIN last_scores ls ON ls.drill_id = d.id
     WHERE btd.template_id = tb.template_id
     ORDER BY
@@ -63,6 +73,7 @@ export async function getBlockDrills(blockId: string): Promise<BlockDrillItem[]>
     },
     sort_order: r.sort_order as number,
     done_today: Boolean(r.done_today),
+    session_count: Number(r.session_count ?? 0),
     last_score: r.last_score !== null && r.last_score !== undefined ? Number(r.last_score) : null,
     last_log_date: r.last_log_date ? String(r.last_log_date) : null,
   }))
@@ -79,7 +90,6 @@ export async function getDrillComparison(
   `
   const drill = drillRows[0] as Record<string, unknown>
 
-  // Previous score: second most recent scored log for this drill in this block
   const prevRows = await sql`
     SELECT score FROM drill_logs
     WHERE block_id = ${blockId}
@@ -91,7 +101,6 @@ export async function getDrillComparison(
   `
   const previousScore = prevRows[0] ? Number(prevRows[0].score) : null
 
-  // Personal best across all blocks
   const pbRows = await sql`
     SELECT
       CASE WHEN d.scoring_direction = 'higher_better' THEN MAX(dl.score)

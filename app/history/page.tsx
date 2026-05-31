@@ -34,8 +34,12 @@ export default async function HistoryPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{block.name}</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge variant={block.status === 'completed' ? 'default' : 'secondary'}>
-                      {block.status === 'completed' ? 'Done' : 'Active'}
+                    <Badge variant={
+                      block.status === 'completed' ? 'default' :
+                      block.status === 'ended_early' ? 'outline' : 'secondary'
+                    }>
+                      {block.status === 'completed' ? 'Done' :
+                       block.status === 'ended_early' ? 'Ended Early' : 'Active'}
                     </Badge>
                     <ChevronRight className="w-4 h-4 text-muted-foreground" />
                   </div>
@@ -47,7 +51,7 @@ export default async function HistoryPage() {
                   {block.completed_at && ` → ${formatDate(block.completed_at)}`}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {block.target_days} days
+                  {block.target_sessions} sessions
                 </p>
               </CardContent>
             </Card>

@@ -19,13 +19,26 @@ async function fetchBlockInfo(block: TrainingBlock): Promise<ActiveBlockInfo> {
   const completed_drills = Number(statsRows[0]?.completed_drills ?? 0)
   const todays_drill_count = Number(statsRows[0]?.todays_drill_count ?? 0)
   const template_drill_count = Number(templateDrillRows[0]?.drill_count ?? 0)
-  const total_drills = template_drill_count * block.target_days
+  const total_drills = template_drill_count * block.target_sessions
   return { block, completed_drills, total_drills, todays_drill_count }
 }
 
+// Returns all active blocks. Uses the current template name when the template still exists
+// so that renaming a template is reflected without needing to update each block row.
 export async function getActiveBlocks(): Promise<ActiveBlockInfo[]> {
   const blockRows = await sql`
-    SELECT * FROM training_blocks WHERE status = 'active' ORDER BY started_at DESC
+    SELECT
+      tb.id,
+      tb.template_id,
+      COALESCE(bt.name, tb.name) AS name,
+      tb.target_sessions,
+      tb.status,
+      tb.started_at,
+      tb.completed_at
+    FROM training_blocks tb
+    LEFT JOIN block_templates bt ON bt.id = tb.template_id
+    WHERE tb.status = 'active'
+    ORDER BY tb.started_at DESC
   `
   if (blockRows.length === 0) return []
   return Promise.all((blockRows as unknown as TrainingBlock[]).map(fetchBlockInfo))
@@ -33,15 +46,29 @@ export async function getActiveBlocks(): Promise<ActiveBlockInfo[]> {
 
 export async function getActiveBlock(): Promise<ActiveBlockInfo | null> {
   const blockRows = await sql`
-    SELECT * FROM training_blocks WHERE status = 'active' ORDER BY started_at DESC LIMIT 1
+    SELECT
+      tb.id,
+      tb.template_id,
+      COALESCE(bt.name, tb.name) AS name,
+      tb.target_sessions,
+      tb.status,
+      tb.started_at,
+      tb.completed_at
+    FROM training_blocks tb
+    LEFT JOIN block_templates bt ON bt.id = tb.template_id
+    WHERE tb.status = 'active'
+    ORDER BY tb.started_at DESC
+    LIMIT 1
   `
   if (!blockRows[0]) return null
-  return fetchBlockInfo(blockRows[0] as TrainingBlock)
+  return fetchBlockInfo(blockRows[0] as unknown as TrainingBlock)
 }
 
 export async function getBlocks(): Promise<TrainingBlock[]> {
   const rows = await sql`
-    SELECT * FROM training_blocks ORDER BY started_at DESC
+    SELECT id, template_id, name, target_sessions, status, started_at, completed_at
+    FROM training_blocks
+    ORDER BY started_at DESC
   `
   return rows as unknown as TrainingBlock[]
 }
@@ -49,13 +76,19 @@ export async function getBlocks(): Promise<TrainingBlock[]> {
 export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
   const blockRows = await sql`
     SELECT
-      tb.*,
-      bt.id          AS template_id_join,
-      bt.name        AS template_name,
-      bt.description AS template_description,
-      bt.target_days AS template_target_days,
-      bt.is_default  AS template_is_default,
-      bt.created_at  AS template_created_at
+      tb.id,
+      tb.template_id,
+      COALESCE(bt.name, tb.name) AS name,
+      tb.target_sessions,
+      tb.status,
+      tb.started_at,
+      tb.completed_at,
+      bt.id            AS template_id_join,
+      bt.name          AS template_name,
+      bt.description   AS template_description,
+      bt.target_sessions AS template_target_sessions,
+      bt.is_default    AS template_is_default,
+      bt.created_at    AS template_created_at
     FROM training_blocks tb
     LEFT JOIN block_templates bt ON bt.id = tb.template_id
     WHERE tb.id = ${id}
@@ -68,8 +101,8 @@ export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
     id: r.id as string,
     template_id: r.template_id as string | null,
     name: r.name as string,
-    target_days: r.target_days as number,
-    status: r.status as 'active' | 'completed',
+    target_sessions: r.target_sessions as number,
+    status: r.status as 'active' | 'completed' | 'ended_early',
     started_at: r.started_at as string,
     completed_at: r.completed_at as string | null,
     template: r.template_name
@@ -77,7 +110,7 @@ export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
           id: r.template_id_join as string,
           name: r.template_name as string,
           description: r.template_description as string | null,
-          target_days: r.template_target_days as number,
+          target_sessions: r.template_target_sessions as number,
           is_default: r.template_is_default as boolean,
           created_at: r.template_created_at as string,
         }
@@ -139,4 +172,26 @@ export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
 
   block.day_logs = Array.from(dayMap.values())
   return block
+}
+
+// Returns true when every drill in the block's template has been scored at least
+// target_sessions times. Returns false if the block is not active or has no drills.
+export async function isBlockComplete(blockId: string): Promise<boolean> {
+  const rows = await sql`
+    SELECT
+      BOOL_AND(session_count >= target_sessions) AS complete
+    FROM (
+      SELECT
+        btd.drill_id,
+        tb.target_sessions,
+        COUNT(dl.id) FILTER (WHERE dl.skipped = false AND dl.score IS NOT NULL) AS session_count
+      FROM training_blocks tb
+      JOIN block_template_drills btd ON btd.template_id = tb.template_id
+      LEFT JOIN drill_logs dl ON dl.drill_id = btd.drill_id AND dl.block_id = tb.id
+      WHERE tb.id = ${blockId}
+        AND tb.status = 'active'
+      GROUP BY btd.drill_id, tb.target_sessions
+    ) sub
+  `
+  return rows[0]?.complete === true
 }

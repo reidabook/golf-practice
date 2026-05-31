@@ -55,7 +55,7 @@ Columns: `id, name, unit, scoring_direction, category, description, source, is_d
 ---
 
 ### `block_templates` + `block_template_drills`
-Columns: `id, name, description, target_days, is_default` / `template_id, drill_id, sort_order`
+Columns: `id, name, description, target_sessions, is_default` / `template_id, drill_id, sort_order`
 
 | Operation | File |
 |---|---|
@@ -67,7 +67,7 @@ Columns: `id, name, description, target_days, is_default` / `template_id, drill_
 ---
 
 ### `training_blocks`
-Columns: `id, template_id, name, target_days, status, started_at, completed_at`
+Columns: `id, template_id, name, target_sessions, status, started_at, completed_at`
 
 | Operation | File |
 |---|---|
