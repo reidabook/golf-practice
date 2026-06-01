@@ -1,16 +1,13 @@
-import { getRows, toObj, nullStr, today } from '@/lib/sheets'
+import { getCachedRows, getRows, nullStr, today } from '@/lib/sheets'
 import { rowToDrill } from '@/lib/queries/drills'
-import type { ActiveBlockInfo, BlockWithDayLogs, TrainingBlock, Drill } from '@/lib/types'
+import type { ActiveBlockInfo, BlockWithDayLogs, TrainingBlock } from '@/lib/types'
 
 function rowToBlock(r: Record<string, string>): TrainingBlock {
   return {
-    id:              r.id,
-    template_id:     nullStr(r.template_id),
-    name:            r.name,
+    id: r.id, template_id: nullStr(r.template_id), name: r.name,
     target_sessions: Number(r.target_sessions),
-    status:          r.status as TrainingBlock['status'],
-    started_at:      r.started_at,
-    completed_at:    nullStr(r.completed_at),
+    status: r.status as TrainingBlock['status'],
+    started_at: r.started_at, completed_at: nullStr(r.completed_at),
   }
 }
 
@@ -20,145 +17,85 @@ async function fetchBlockInfo(
   templateDrillCounts: Map<string, number>
 ): Promise<ActiveBlockInfo> {
   const blockLogs = allLogs.filter(l => l.block_id === block.id)
-  const scoredLogs = blockLogs.filter(l => l.skipped === 'false' && l.score !== '')
-  const todayLogs = scoredLogs.filter(l => l.log_date === today())
-
-  const drillCount = block.template_id ? (templateDrillCounts.get(block.template_id) ?? 0) : 0
-  const total_drills = drillCount * block.target_sessions
-
-  return {
-    block,
-    completed_drills: scoredLogs.length,
-    total_drills,
-    todays_drill_count: todayLogs.length,
-  }
+  const scoredLogs = blockLogs.filter(l => parseBoolStr(l.skipped) === false && l.score !== '')
+  const total_drills = (block.template_id ? (templateDrillCounts.get(block.template_id) ?? 0) : 0) * block.target_sessions
+  return { block, completed_drills: scoredLogs.length, total_drills,
+    todays_drill_count: scoredLogs.filter(l => l.log_date === today()).length }
 }
+
+const parseBoolStr = (v: string) => v.toLowerCase() === 'true'
 
 export async function getActiveBlocks(): Promise<ActiveBlockInfo[]> {
   const [blockRows, templateRows, btdRows, logRows] = await Promise.all([
-    getRows('training_blocks'),
-    getRows('block_templates'),
-    getRows('block_template_drills'),
-    getRows('drill_logs'),
+    getCachedRows('training_blocks'), getCachedRows('block_templates'),
+    getCachedRows('block_template_drills'), getCachedRows('drill_logs'),
   ])
-
-  const templateMap = new Map(templateRows.map(toObj).map(r => [r.id, r]))
-  const allLogs = logRows.map(toObj)
-
-  // Count drills per template
+  const templateMap = new Map(templateRows.map(r => [r.id, r]))
   const templateDrillCounts = new Map<string, number>()
-  for (const btd of btdRows.map(toObj)) {
+  for (const btd of btdRows) {
     templateDrillCounts.set(btd.template_id, (templateDrillCounts.get(btd.template_id) ?? 0) + 1)
   }
-
   const activeBlocks = blockRows
-    .map(toObj)
     .filter(r => r.status === 'active')
     .sort((a, b) => b.started_at.localeCompare(a.started_at))
-    .map(r => {
-      // Use current template name if available
-      const tmpl = r.template_id ? templateMap.get(r.template_id) : null
-      return rowToBlock({ ...r, name: tmpl?.name ?? r.name })
-    })
-
-  return Promise.all(activeBlocks.map(b => fetchBlockInfo(b, allLogs, templateDrillCounts)))
+    .map(r => rowToBlock({ ...r, name: (r.template_id ? templateMap.get(r.template_id)?.name : undefined) ?? r.name }))
+  return Promise.all(activeBlocks.map(b => fetchBlockInfo(b, logRows, templateDrillCounts)))
 }
 
 export async function getActiveBlock(): Promise<ActiveBlockInfo | null> {
-  const blocks = await getActiveBlocks()
-  return blocks[0] ?? null
+  return (await getActiveBlocks())[0] ?? null
 }
 
 export async function getBlocks(): Promise<TrainingBlock[]> {
-  const rows = await getRows('training_blocks')
-  return rows
-    .map(toObj)
-    .map(rowToBlock)
-    .sort((a, b) => b.started_at.localeCompare(a.started_at))
+  const rows = await getCachedRows('training_blocks')
+  return rows.map(rowToBlock).sort((a, b) => b.started_at.localeCompare(a.started_at))
 }
 
 export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
   const [blockRows, templateRows, logRows, drillRows] = await Promise.all([
-    getRows('training_blocks'),
-    getRows('block_templates'),
-    getRows('drill_logs'),
-    getRows('drills'),
+    getCachedRows('training_blocks'), getCachedRows('block_templates'),
+    getCachedRows('drill_logs'), getCachedRows('drills'),
   ])
-
-  const blockRaw = blockRows.map(toObj).find(r => r.id === id)
+  const blockRaw = blockRows.find(r => r.id === id)
   if (!blockRaw) return null
-
-  const tmplRaw = blockRaw.template_id
-    ? templateRows.map(toObj).find(r => r.id === blockRaw.template_id)
-    : null
-
+  const tmplRaw = blockRaw.template_id ? templateRows.find(r => r.id === blockRaw.template_id) : null
   const block: BlockWithDayLogs = {
     ...rowToBlock(blockRaw),
-    template: tmplRaw
-      ? {
-          id:              tmplRaw.id,
-          name:            tmplRaw.name,
-          description:     nullStr(tmplRaw.description),
-          target_sessions: Number(tmplRaw.target_sessions),
-          is_default:      tmplRaw.is_default === 'true',
-          created_at:      tmplRaw.created_at,
-        }
-      : null,
+    template: tmplRaw ? {
+      id: tmplRaw.id, name: tmplRaw.name, description: nullStr(tmplRaw.description),
+      target_sessions: Number(tmplRaw.target_sessions), is_default: parseBoolStr(tmplRaw.is_default),
+      created_at: tmplRaw.created_at,
+    } : null,
     day_logs: [],
   }
-
-  const drillMap = new Map(drillRows.map(toObj).map(r => [r.id, rowToDrill(r)]))
-
+  const drillMap = new Map(drillRows.map(r => [r.id, rowToDrill(r)]))
   const blockLogs = logRows
-    .map(toObj)
     .filter(r => r.block_id === id)
-    .sort((a, b) => {
-      const dateDiff = b.log_date.localeCompare(a.log_date)
-      return dateDiff !== 0 ? dateDiff : b.created_at.localeCompare(a.created_at)
-    })
-
-  const dayMap = new Map<string, { log_date: string; drills: BlockWithDayLogs['day_logs'][number]['drills'] }>()
+    .sort((a, b) => { const d = b.log_date.localeCompare(a.log_date); return d !== 0 ? d : b.created_at.localeCompare(a.created_at) })
+  const dayMap = new Map<string, BlockWithDayLogs['day_logs'][number]>()
   for (const r of blockLogs) {
     const drill = drillMap.get(r.drill_id)
     if (!drill) continue
     if (!dayMap.has(r.log_date)) dayMap.set(r.log_date, { log_date: r.log_date, drills: [] })
     dayMap.get(r.log_date)!.drills.push({
-      id:        r.id,
-      block_id:  id,
-      drill_id:  r.drill_id,
-      score:     r.score === '' ? null : Number(r.score),
-      skipped:   r.skipped === 'true',
-      log_date:  r.log_date,
-      created_at: r.created_at,
-      drill,
+      id: r.id, block_id: id, drill_id: r.drill_id,
+      score: r.score === '' ? null : Number(r.score),
+      skipped: parseBoolStr(r.skipped), log_date: r.log_date, created_at: r.created_at, drill,
     })
   }
-
   block.day_logs = Array.from(dayMap.values())
   return block
 }
 
 export async function isBlockComplete(blockId: string): Promise<boolean> {
   const [blockRows, btdRows, logRows] = await Promise.all([
-    getRows('training_blocks'),
-    getRows('block_template_drills'),
-    getRows('drill_logs'),
+    getRows('training_blocks'), getRows('block_template_drills'), getRows('drill_logs'),
   ])
-
-  const block = blockRows.map(toObj).find(r => r.id === blockId)
+  const block = blockRows.map(r => ({ id: r.get('id'), status: r.get('status'), template_id: r.get('template_id'), target_sessions: r.get('target_sessions') })).find(r => r.id === blockId)
   if (!block || block.status !== 'active' || !block.template_id) return false
-
-  const templateDrills = btdRows.map(toObj).filter(r => r.template_id === block.template_id)
+  const templateDrills = btdRows.filter(r => r.get('template_id') === block.template_id)
   if (templateDrills.length === 0) return false
-
-  const scoredLogs = logRows
-    .map(toObj)
-    .filter(r => r.block_id === blockId && r.skipped === 'false' && r.score !== '')
-
+  const scoredLogs = logRows.filter(r => r.get('block_id') === blockId && r.get('skipped').toLowerCase() === 'false' && r.get('score') !== '')
   const target = Number(block.target_sessions)
-
-  return templateDrills.every(btd => {
-    const count = scoredLogs.filter(l => l.drill_id === btd.drill_id).length
-    return count >= target
-  })
+  return templateDrills.every(btd => scoredLogs.filter(l => l.get('drill_id') === btd.get('drill_id')).length >= target)
 }

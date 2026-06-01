@@ -1,4 +1,4 @@
-import { getRows, toObj, parseBool, nullNum } from '@/lib/sheets'
+import { getCachedRows, parseBool, nullNum } from '@/lib/sheets'
 import type { Drill } from '@/lib/types'
 
 export function rowToDrill(r: Record<string, string>): Drill {
@@ -17,9 +17,8 @@ export function rowToDrill(r: Record<string, string>): Drill {
 }
 
 export async function getDrills(): Promise<Drill[]> {
-  const rows = await getRows('drills')
+  const rows = await getCachedRows('drills')
   return rows
-    .map(toObj)
     .map(rowToDrill)
     .sort((a, b) => {
       if (a.is_default !== b.is_default) return a.is_default ? -1 : 1
@@ -28,7 +27,7 @@ export async function getDrills(): Promise<Drill[]> {
 }
 
 export async function getDrill(id: string): Promise<Drill | null> {
-  const rows = await getRows('drills')
-  const row = rows.map(toObj).find(r => r.id === id)
+  const rows = await getCachedRows('drills')
+  const row = rows.find(r => r.id === id)
   return row ? rowToDrill(row) : null
 }

@@ -1,6 +1,6 @@
 'use server'
 
-import { getSheet, getRows, newId, nowISO } from '@/lib/sheets'
+import { getSheet, getRows, newId, nowISO, invalidateSheetCache } from '@/lib/sheets'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
@@ -21,6 +21,7 @@ export async function startBlock(templateId: string): Promise<void> {
     completed_at:    '',
   })
 
+  invalidateSheetCache()
   revalidatePath('/')
   redirect(`/blocks/${blockId}/drills`)
 }
@@ -33,7 +34,9 @@ export async function completeBlock(blockId: string): Promise<void> {
   row.set('completed_at', nowISO())
   await row.save()
 
+  invalidateSheetCache()
   revalidatePath('/')
+  invalidateSheetCache()
   revalidatePath(`/history/${blockId}`)
   redirect(`/history/${blockId}`)
 }
@@ -46,7 +49,9 @@ export async function endBlockEarly(blockId: string): Promise<void> {
   row.set('completed_at', nowISO())
   await row.save()
 
+  invalidateSheetCache()
   revalidatePath('/')
+  invalidateSheetCache()
   revalidatePath(`/history/${blockId}`)
   redirect('/')
 }
@@ -59,7 +64,9 @@ export async function extendBlock(blockId: string, additionalSessions: number): 
   row.set('target_sessions', String(current + additionalSessions))
   await row.save()
 
+  invalidateSheetCache()
   revalidatePath('/')
+  invalidateSheetCache()
   revalidatePath(`/blocks/${blockId}/drills`)
 }
 
@@ -74,6 +81,7 @@ export async function deleteBlock(blockId: string): Promise<void> {
   const row = blockRows.find(r => r.get('id') === blockId)
   if (row) await row.delete()
 
+  invalidateSheetCache()
   revalidatePath('/')
   redirect('/')
 }
