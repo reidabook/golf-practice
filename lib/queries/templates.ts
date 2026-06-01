@@ -1,99 +1,59 @@
-import { sql } from '@/lib/db'
+import { getRows, toObj, parseBool, nullStr } from '@/lib/sheets'
+import { rowToDrill } from '@/lib/queries/drills'
 import type { BlockTemplate, TemplateDrill } from '@/lib/types'
 
+function rowToTemplate(r: Record<string, string>, drills: TemplateDrill[] = []): BlockTemplate {
+  return {
+    id:              r.id,
+    name:            r.name,
+    description:     nullStr(r.description),
+    target_sessions: Number(r.target_sessions),
+    is_default:      parseBool(r.is_default),
+    created_at:      r.created_at,
+    drills,
+  }
+}
+
 export async function getTemplates(): Promise<BlockTemplate[]> {
-  const templateRows = await sql`
-    SELECT * FROM block_templates ORDER BY is_default DESC, created_at ASC
-  `
-  if (templateRows.length === 0) return []
+  const [templateRows, btdRows, drillRows] = await Promise.all([
+    getRows('block_templates'),
+    getRows('block_template_drills'),
+    getRows('drills'),
+  ])
 
-  const drillRows = await sql`
-    SELECT
-      btd.id, btd.template_id, btd.drill_id, btd.sort_order,
-      d.name, d.description, d.instructions, d.scoring_direction,
-      d.max_score, d.min_score, d.unit, d.is_default,
-      d.created_at AS drill_created_at
-    FROM block_template_drills btd
-    JOIN drills d ON d.id = btd.drill_id
-    ORDER BY btd.template_id, btd.sort_order ASC
-  `
+  const templates = templateRows.map(toObj)
+  const btds = btdRows.map(toObj)
+  const drillMap = new Map(drillRows.map(toObj).map(r => [r.id, rowToDrill(r)]))
 
-  const drillsByTemplate = new Map<string, TemplateDrill[]>()
-  for (const r of drillRows as Record<string, unknown>[]) {
+  const drillsByTemplate: Record<string, TemplateDrill[]> = {}
+  for (const btd of btds) {
+    const drill = drillMap.get(btd.drill_id)
+    if (!drill) continue
     const td: TemplateDrill = {
-      id: r.id as string,
-      template_id: r.template_id as string,
-      drill_id: r.drill_id as string,
-      sort_order: r.sort_order as number,
-      drill: {
-        id: r.drill_id as string,
-        name: r.name as string,
-        description: r.description as string,
-        instructions: r.instructions as string,
-        scoring_direction: r.scoring_direction as 'higher_better' | 'lower_better',
-        max_score: r.max_score as number | null,
-        min_score: r.min_score as number,
-        unit: r.unit as string,
-        is_default: r.is_default as boolean,
-        created_at: r.drill_created_at as string,
-      },
+      id:          btd.id,
+      template_id: btd.template_id,
+      drill_id:    btd.drill_id,
+      sort_order:  Number(btd.sort_order),
+      drill,
     }
-    const list = drillsByTemplate.get(td.template_id) ?? []
-    list.push(td)
-    drillsByTemplate.set(td.template_id, list)
+    if (!drillsByTemplate[btd.template_id]) drillsByTemplate[btd.template_id] = []
+    drillsByTemplate[btd.template_id].push(td)
   }
 
-  return (templateRows as unknown as BlockTemplate[]).map((t) => ({
-    ...t,
-    drills: drillsByTemplate.get(t.id) ?? [],
-  }))
+  // Sort each template's drills by sort_order
+  for (const templateId of Object.keys(drillsByTemplate)) {
+    drillsByTemplate[templateId].sort((a: TemplateDrill, b: TemplateDrill) => a.sort_order - b.sort_order)
+  }
+
+  return templates
+    .map(t => rowToTemplate(t, drillsByTemplate[t.id] ?? []))
+    .sort((a: BlockTemplate, b: BlockTemplate) => {
+      if (a.is_default !== b.is_default) return a.is_default ? -1 : 1
+      return a.created_at.localeCompare(b.created_at)
+    })
 }
 
 export async function getTemplate(id: string): Promise<BlockTemplate | null> {
-  const rows = await sql`
-    SELECT * FROM block_templates WHERE id = ${id}
-  `
-  if (!rows[0]) return null
-
-  const template = rows[0] as BlockTemplate
-
-  const drillRows = await sql`
-    SELECT
-      btd.*,
-      d.id          AS drill_id,
-      d.name        AS drill_name,
-      d.description AS drill_description,
-      d.instructions,
-      d.scoring_direction,
-      d.max_score,
-      d.min_score,
-      d.unit,
-      d.is_default,
-      d.created_at  AS drill_created_at
-    FROM block_template_drills btd
-    JOIN drills d ON d.id = btd.drill_id
-    WHERE btd.template_id = ${id}
-    ORDER BY btd.sort_order ASC
-  `
-
-  template.drills = drillRows.map((r: Record<string, unknown>) => ({
-    id: r.id,
-    template_id: r.template_id,
-    drill_id: r.drill_id,
-    sort_order: r.sort_order,
-    drill: {
-      id: r.drill_id,
-      name: r.drill_name,
-      description: r.drill_description,
-      instructions: r.instructions,
-      scoring_direction: r.scoring_direction,
-      max_score: r.max_score,
-      min_score: r.min_score,
-      unit: r.unit,
-      is_default: r.is_default,
-      created_at: r.drill_created_at,
-    },
-  })) as unknown as TemplateDrill[]
-
-  return template
+  const templates = await getTemplates()
+  return templates.find(t => t.id === id) ?? null
 }

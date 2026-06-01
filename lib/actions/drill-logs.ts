@@ -1,6 +1,6 @@
 'use server'
 
-import { sql } from '@/lib/db'
+import { getSheet, newId, nowISO, today } from '@/lib/sheets'
 import { revalidatePath } from 'next/cache'
 import { getDrillComparison } from '@/lib/queries/drill-logs'
 import { isBlockComplete } from '@/lib/queries/blocks'
@@ -11,21 +11,18 @@ export async function saveDrillLog(
   drillId: string,
   score: number
 ): Promise<DrillSaveResult> {
-  const logRows = await sql`
-    INSERT INTO drill_logs (block_id, drill_id, score, skipped, log_date)
-    VALUES (${blockId}, ${drillId}, ${score}, false, CURRENT_DATE)
-    RETURNING id, block_id, drill_id, score, skipped, log_date, created_at
-  `
-  const row = logRows[0] as Record<string, unknown>
-  const log = {
-    id: row.id as string,
-    block_id: row.block_id as string,
-    drill_id: row.drill_id as string,
-    score: Number(row.score),
-    skipped: Boolean(row.skipped),
-    log_date: String(row.log_date),
-    created_at: row.created_at as string,
-  }
+  const logId = newId()
+  const now = nowISO()
+  const sheet = await getSheet('drill_logs')
+  await sheet.addRow({
+    id:         logId,
+    block_id:   blockId,
+    drill_id:   drillId,
+    score:      String(score),
+    skipped:    'false',
+    log_date:   today(),
+    created_at: now,
+  })
 
   revalidatePath(`/blocks/${blockId}/drills`)
   revalidatePath(`/blocks/${blockId}/drills/${drillId}`)
@@ -36,14 +33,30 @@ export async function saveDrillLog(
     isBlockComplete(blockId),
   ])
 
+  const log = {
+    id:         logId,
+    block_id:   blockId,
+    drill_id:   drillId,
+    score,
+    skipped:    false,
+    log_date:   today(),
+    created_at: now,
+  }
+
   return { log, comparison, blockComplete }
 }
 
 export async function skipDrillLog(blockId: string, drillId: string): Promise<void> {
-  await sql`
-    INSERT INTO drill_logs (block_id, drill_id, score, skipped, log_date)
-    VALUES (${blockId}, ${drillId}, NULL, true, CURRENT_DATE)
-  `
+  const sheet = await getSheet('drill_logs')
+  await sheet.addRow({
+    id:         newId(),
+    block_id:   blockId,
+    drill_id:   drillId,
+    score:      '',
+    skipped:    'true',
+    log_date:   today(),
+    created_at: nowISO(),
+  })
   revalidatePath(`/blocks/${blockId}/drills`)
 }
 
@@ -53,10 +66,15 @@ export async function logDrillScore(
   date?: string,
   _notes?: string
 ): Promise<void> {
-  const logDate = date ?? new Date().toISOString().split('T')[0]
-  await sql`
-    INSERT INTO drill_logs (drill_id, score, skipped, log_date)
-    VALUES (${drillId}, ${score}, false, ${logDate}::date)
-  `
+  const sheet = await getSheet('drill_logs')
+  await sheet.addRow({
+    id:         newId(),
+    block_id:   '',
+    drill_id:   drillId,
+    score:      String(score),
+    skipped:    'false',
+    log_date:   date ?? today(),
+    created_at: nowISO(),
+  })
   revalidatePath('/progress')
 }
