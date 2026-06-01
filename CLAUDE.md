@@ -17,3 +17,12 @@
 2. After changes, verify all touched features still work as described.
 3. Call out any feature removal/alteration explicitly before proceeding.
 4. Update the relevant `features/*.md` as part of the same commit.
+
+## MANDATORY: Keep documentation current
+After every change — no exceptions — update whichever of these are affected:
+- `CLAUDE.md` — if the stack, env vars, or mandatory rules change
+- `ARCHITECTURE.md` — if routes, sheet tabs, query/action files, or data patterns change
+- `features/shared.md` — if data model, business logic, or UI patterns change
+- `features/*.md` — if any feature's behaviour, layout, or data flow changes
+
+Documentation updates must be included in the same commit as the code change. Never leave docs stale.
