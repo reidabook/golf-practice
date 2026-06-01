@@ -1,6 +1,6 @@
 'use server'
 
-import { getSheet, getRows, newId, nowISO } from '@/lib/sheets'
+import { getSheet, getRows, newId, nowISO, invalidateSheetCache } from '@/lib/sheets'
 import { revalidatePath } from 'next/cache'
 
 export async function createTemplate(data: {
@@ -32,6 +32,7 @@ export async function createTemplate(data: {
     )
   }
 
+  invalidateSheetCache()
   revalidatePath('/drills')
 }
 
@@ -71,6 +72,7 @@ export async function updateTemplate(
     )
   }
 
+  invalidateSheetCache()
   revalidatePath('/drills')
 }
 
@@ -85,5 +87,6 @@ export async function deleteTemplate(id: string): Promise<void> {
   const row = templateRows.find(r => r.get('id') === id)
   if (row) await row.delete()
 
+  invalidateSheetCache()
   revalidatePath('/drills')
 }

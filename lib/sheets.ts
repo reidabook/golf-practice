@@ -1,5 +1,6 @@
 import { GoogleSpreadsheet, type GoogleSpreadsheetRow } from 'google-spreadsheet'
 import { JWT } from 'google-auth-library'
+import { unstable_cache, revalidateTag } from 'next/cache'
 
 // ─── Tab name map (sheet uses hyphens, code uses underscores) ──────────────────
 export const TABS = {
@@ -42,6 +43,7 @@ export async function getSheet(tabKey: keyof typeof TABS) {
   return sheet
 }
 
+// ─── Raw rows (for mutations in actions) ──────────────────────────────────────
 export async function getRows(tabKey: keyof typeof TABS): Promise<GoogleSpreadsheetRow[]> {
   const sheet = await getSheet(tabKey)
   return sheet.getRows()
@@ -56,10 +58,29 @@ export function toObj(row: GoogleSpreadsheetRow): Record<string, string> {
   return obj
 }
 
+// ─── Cached reads (for queries — busted by invalidateSheetCache()) ─────────────
+async function fetchRows(tabKey: keyof typeof TABS): Promise<Record<string, string>[]> {
+  const sheet = await getSheet(tabKey)
+  const rows = await sheet.getRows()
+  return rows.map(toObj)
+}
+
+export const getCachedRows = unstable_cache(
+  fetchRows,
+  ['sheets-rows'],
+  { tags: ['sheets-data'] }
+)
+
+// Call this in every action after writing to the sheet
+export function invalidateSheetCache() {
+  revalidateTag('sheets-data')
+}
+
 // ─── Type helpers ──────────────────────────────────────────────────────────────
-export const nullStr  = (v: string) => v === '' ? null : v
-export const nullNum  = (v: string) => v === '' ? null : Number(v)
-export const parseBool = (v: string) => v === 'true'
-export const today    = () => new Date().toISOString().split('T')[0]
-export const nowISO   = () => new Date().toISOString()
-export const newId    = () => crypto.randomUUID()
+export const nullStr   = (v: string) => v === '' ? null : v
+export const nullNum   = (v: string) => v === '' ? null : Number(v)
+// Handle both 'true'/'false' and 'TRUE'/'FALSE' (from Postgres CSV export)
+export const parseBool = (v: string) => v.toLowerCase() === 'true'
+export const today     = () => new Date().toISOString().split('T')[0]
+export const nowISO    = () => new Date().toISOString()
+export const newId     = () => crypto.randomUUID()

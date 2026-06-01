@@ -1,6 +1,6 @@
 'use server'
 
-import { getSheet, getRows, toObj, newId, nowISO } from '@/lib/sheets'
+import { getSheet, getRows, toObj, newId, nowISO, invalidateSheetCache } from '@/lib/sheets'
 import { revalidatePath } from 'next/cache'
 
 export async function createDrill(data: {
@@ -27,6 +27,7 @@ export async function createDrill(data: {
     source:            '',
     created_at:        nowISO(),
   })
+  invalidateSheetCache()
   revalidatePath('/drills')
 }
 
@@ -53,6 +54,7 @@ export async function updateDrill(
   row.set('min_score', String(data.min_score))
   row.set('unit', data.unit)
   await row.save()
+  invalidateSheetCache()
   revalidatePath('/drills')
 }
 
@@ -72,7 +74,8 @@ export async function deleteDrill(id: string): Promise<{ error?: string }> {
     const row = rows.find(r => r.get('id') === id)
     if (!row) return { error: 'Drill not found.' }
     await row.delete()
-    revalidatePath('/drills')
+    invalidateSheetCache()
+  revalidatePath('/drills')
     return {}
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : String(e) }

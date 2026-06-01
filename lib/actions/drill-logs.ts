@@ -1,6 +1,6 @@
 'use server'
 
-import { getSheet, newId, nowISO, today } from '@/lib/sheets'
+import { getSheet, newId, nowISO, today, invalidateSheetCache } from '@/lib/sheets'
 import { revalidatePath } from 'next/cache'
 import { getDrillComparison } from '@/lib/queries/drill-logs'
 import { isBlockComplete } from '@/lib/queries/blocks'
@@ -24,8 +24,11 @@ export async function saveDrillLog(
     created_at: now,
   })
 
+  invalidateSheetCache()
   revalidatePath(`/blocks/${blockId}/drills`)
+  invalidateSheetCache()
   revalidatePath(`/blocks/${blockId}/drills/${drillId}`)
+  invalidateSheetCache()
   revalidatePath('/progress')
 
   const [comparison, blockComplete] = await Promise.all([
@@ -57,6 +60,7 @@ export async function skipDrillLog(blockId: string, drillId: string): Promise<vo
     log_date:   today(),
     created_at: nowISO(),
   })
+  invalidateSheetCache()
   revalidatePath(`/blocks/${blockId}/drills`)
 }
 
@@ -76,5 +80,6 @@ export async function logDrillScore(
     log_date:   date ?? today(),
     created_at: nowISO(),
   })
+  invalidateSheetCache()
   revalidatePath('/progress')
 }
