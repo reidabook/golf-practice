@@ -1,82 +1,61 @@
-import { sql } from '@/lib/db'
+import { getRows, toObj, nullNum, today } from '@/lib/sheets'
+import { rowToDrill } from '@/lib/queries/drills'
 import type { BlockDrillItem, DrillComparison, Drill } from '@/lib/types'
 
 export async function getBlockDrills(blockId: string): Promise<BlockDrillItem[]> {
-  const rows = await sql`
-    WITH today_done AS (
-      SELECT DISTINCT drill_id
-      FROM drill_logs
-      WHERE block_id = ${blockId}
-        AND log_date = CURRENT_DATE
-        AND skipped = false
-        AND score IS NOT NULL
-    ),
-    last_scores AS (
-      SELECT DISTINCT ON (dl.drill_id)
-        dl.drill_id,
-        dl.score AS last_score,
-        dl.log_date AS last_log_date
-      FROM drill_logs dl
-      WHERE dl.block_id = ${blockId}
-        AND dl.skipped = false
-        AND dl.score IS NOT NULL
-      ORDER BY dl.drill_id, dl.log_date DESC, dl.created_at DESC
-    ),
-    session_counts AS (
-      SELECT drill_id, COUNT(*) AS session_count
-      FROM drill_logs
-      WHERE block_id = ${blockId}
-        AND skipped = false
-        AND score IS NOT NULL
-      GROUP BY drill_id
-    )
-    SELECT
-      d.id,
-      d.name,
-      d.description,
-      d.instructions,
-      d.scoring_direction,
-      d.max_score,
-      d.min_score,
-      d.unit,
-      d.is_default,
-      d.created_at,
-      btd.sort_order,
-      CASE WHEN td.drill_id IS NOT NULL THEN true ELSE false END AS done_today,
-      COALESCE(sc.session_count, 0) AS session_count,
-      ls.last_score,
-      ls.last_log_date
-    FROM block_template_drills btd
-    JOIN training_blocks tb ON tb.id = ${blockId}
-    JOIN drills d ON d.id = btd.drill_id
-    LEFT JOIN today_done td ON td.drill_id = d.id
-    LEFT JOIN session_counts sc ON sc.drill_id = d.id
-    LEFT JOIN last_scores ls ON ls.drill_id = d.id
-    WHERE btd.template_id = tb.template_id
-    ORDER BY
-      CASE WHEN td.drill_id IS NOT NULL THEN 1 ELSE 0 END ASC,
-      btd.sort_order ASC
-  `
+  const [blockRows, btdRows, drillRows, logRows] = await Promise.all([
+    getRows('training_blocks'),
+    getRows('block_template_drills'),
+    getRows('drills'),
+    getRows('drill_logs'),
+  ])
 
-  return rows.map((r: Record<string, unknown>) => ({
-    drill: {
-      id: r.id as string,
-      name: r.name as string,
-      description: r.description as string,
-      instructions: r.instructions as string,
-      scoring_direction: r.scoring_direction as Drill['scoring_direction'],
-      max_score: r.max_score as number | null,
-      min_score: r.min_score as number,
-      unit: r.unit as string,
-      is_default: r.is_default as boolean,
-      created_at: r.created_at as string,
-    },
-    sort_order: r.sort_order as number,
-    done_today: Boolean(r.done_today),
-    session_count: Number(r.session_count ?? 0),
-    last_score: r.last_score !== null && r.last_score !== undefined ? Number(r.last_score) : null,
-    last_log_date: r.last_log_date ? String(r.last_log_date) : null,
-  }))
+  const block = blockRows.map(toObj).find(r => r.id === blockId)
+  if (!block) return []
+
+  const drillMap = new Map(drillRows.map(toObj).map(r => [r.id, rowToDrill(r)]))
+
+  const templateDrills = btdRows
+    .map(toObj)
+    .filter(r => r.template_id === block.template_id)
+    .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
+
+  const blockLogs = logRows
+    .map(toObj)
+    .filter(r => r.block_id === blockId && r.skipped === 'false' && r.score !== '')
+
+  const todayStr = today()
+
+  return templateDrills
+    .map(btd => {
+      const drill = drillMap.get(btd.drill_id)
+      if (!drill) return null
+
+      const drillLogs = blockLogs
+        .filter(l => l.drill_id === btd.drill_id)
+        .sort((a, b) => {
+          const d = b.log_date.localeCompare(a.log_date)
+          return d !== 0 ? d : b.created_at.localeCompare(a.created_at)
+        })
+
+      const doneToday = drillLogs.some(l => l.log_date === todayStr)
+      const lastLog = drillLogs[0] ?? null
+
+      return {
+        drill,
+        sort_order:     Number(btd.sort_order),
+        done_today:     doneToday,
+        session_count:  drillLogs.length,
+        last_score:     lastLog ? Number(lastLog.score) : null,
+        last_log_date:  lastLog ? lastLog.log_date : null,
+      } satisfies BlockDrillItem
+    })
+    .filter((x): x is BlockDrillItem => x !== null)
+    // Done-today drills go to the bottom
+    .sort((a, b) => {
+      if (a.done_today !== b.done_today) return a.done_today ? 1 : -1
+      return a.sort_order - b.sort_order
+    })
 }
 
 export async function getDrillComparison(
@@ -84,65 +63,49 @@ export async function getDrillComparison(
   drillId: string,
   currentScore: number
 ): Promise<DrillComparison> {
-  const drillRows = await sql`
-    SELECT id, name, description, instructions, scoring_direction, max_score, min_score, unit, is_default, created_at
-    FROM drills WHERE id = ${drillId}
-  `
-  const drill = drillRows[0] as Record<string, unknown>
+  const [drillRows, logRows] = await Promise.all([
+    getRows('drills'),
+    getRows('drill_logs'),
+  ])
 
-  const prevRows = await sql`
-    SELECT score FROM drill_logs
-    WHERE block_id = ${blockId}
-      AND drill_id = ${drillId}
-      AND skipped = false
-      AND score IS NOT NULL
-    ORDER BY log_date DESC, created_at DESC
-    OFFSET 1 LIMIT 1
-  `
-  const previousScore = prevRows[0] ? Number(prevRows[0].score) : null
+  const drillRaw = drillRows.map(toObj).find(r => r.id === drillId)
+  if (!drillRaw) throw new Error(`Drill not found: ${drillId}`)
+  const drill = rowToDrill(drillRaw)
 
-  const pbRows = await sql`
-    SELECT
-      CASE WHEN d.scoring_direction = 'higher_better' THEN MAX(dl.score)
-           ELSE MIN(dl.score)
-      END AS personal_best
-    FROM drill_logs dl
-    JOIN drills d ON d.id = dl.drill_id
-    WHERE dl.drill_id = ${drillId}
-      AND dl.skipped = false
-      AND dl.score IS NOT NULL
-    GROUP BY d.scoring_direction
-  `
-  const personalBest = pbRows[0] ? Number(pbRows[0].personal_best) : null
+  // All scored non-skipped logs for this drill in this block, newest first
+  const drillLogs = logRows
+    .map(toObj)
+    .filter(r => r.block_id === blockId && r.drill_id === drillId && r.skipped === 'false' && r.score !== '')
+    .sort((a, b) => {
+      const d = b.log_date.localeCompare(a.log_date)
+      return d !== 0 ? d : b.created_at.localeCompare(a.created_at)
+    })
 
-  const scoringDirection = drill.scoring_direction as Drill['scoring_direction']
+  // Previous score = second entry (index 1, since current was just inserted)
+  const previousScore = drillLogs[1] ? Number(drillLogs[1].score) : null
+
+  // Personal best across ALL logs for this drill (not just this block)
+  const allDrillLogs = logRows
+    .map(toObj)
+    .filter(r => r.drill_id === drillId && r.skipped === 'false' && r.score !== '')
+    .map(r => Number(r.score))
+
+  const personalBest = allDrillLogs.length === 0
+    ? null
+    : drill.scoring_direction === 'higher_better'
+      ? Math.max(...allDrillLogs)
+      : Math.min(...allDrillLogs)
+
   let trend: DrillComparison['trend']
   if (previousScore === null) {
     trend = 'first'
   } else if (currentScore === previousScore) {
     trend = 'same'
-  } else if (scoringDirection === 'higher_better') {
+  } else if (drill.scoring_direction === 'higher_better') {
     trend = currentScore > previousScore ? 'better' : 'worse'
   } else {
     trend = currentScore < previousScore ? 'better' : 'worse'
   }
 
-  return {
-    current_score: currentScore,
-    previous_score: previousScore,
-    personal_best: personalBest,
-    trend,
-    drill: {
-      id: drill.id as string,
-      name: drill.name as string,
-      description: drill.description as string,
-      instructions: drill.instructions as string,
-      scoring_direction: scoringDirection,
-      max_score: drill.max_score as number | null,
-      min_score: drill.min_score as number,
-      unit: drill.unit as string,
-      is_default: drill.is_default as boolean,
-      created_at: drill.created_at as string,
-    },
-  }
+  return { current_score: currentScore, previous_score: previousScore, personal_best: personalBest, trend, drill }
 }

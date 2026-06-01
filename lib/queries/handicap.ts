@@ -1,21 +1,16 @@
-import { sql } from '@/lib/db'
+import { getRows, toObj } from '@/lib/sheets'
 import type { HandicapSnapshot } from '@/lib/types'
 
-/**
- * Returns all handicap snapshots ordered oldest-first for charting.
- * Returns an empty array if the table doesn't exist yet.
- */
 export async function getHandicapHistory(): Promise<HandicapSnapshot[]> {
   try {
-    const rows = await sql`
-      SELECT snapshot_date::text AS snapshot_date, handicap_index
-      FROM handicap_snapshots
-      ORDER BY snapshot_date ASC
-    `
-    return rows.map((row: Record<string, unknown>) => ({
-      snapshot_date: String(row.snapshot_date),
-      handicap_index: Number(row.handicap_index),
-    }))
+    const rows = await getRows('handicap_snapshots')
+    return rows
+      .map(toObj)
+      .map(r => ({
+        snapshot_date:   r.snapshot_date,
+        handicap_index:  Number(r.handicap_index),
+      }))
+      .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
   } catch {
     return []
   }

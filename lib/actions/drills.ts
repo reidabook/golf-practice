@@ -1,6 +1,6 @@
 'use server'
 
-import { sql } from '@/lib/db'
+import { getSheet, getRows, toObj, newId, nowISO } from '@/lib/sheets'
 import { revalidatePath } from 'next/cache'
 
 export async function createDrill(data: {
@@ -12,13 +12,21 @@ export async function createDrill(data: {
   min_score: number
   unit: string
 }): Promise<void> {
-  await sql`
-    INSERT INTO drills (name, description, instructions, scoring_direction, max_score, min_score, unit)
-    VALUES (
-      ${data.name}, ${data.description}, ${data.instructions},
-      ${data.scoring_direction}, ${data.max_score}, ${data.min_score}, ${data.unit}
-    )
-  `
+  const sheet = await getSheet('drills')
+  await sheet.addRow({
+    id:                newId(),
+    name:              data.name,
+    description:       data.description,
+    instructions:      data.instructions,
+    scoring_direction: data.scoring_direction,
+    max_score:         data.max_score === null ? '' : String(data.max_score),
+    min_score:         String(data.min_score),
+    unit:              data.unit,
+    is_default:        'false',
+    category:          '',
+    source:            '',
+    created_at:        nowISO(),
+  })
   revalidatePath('/drills')
 }
 
@@ -34,30 +42,39 @@ export async function updateDrill(
     unit: string
   }
 ): Promise<void> {
-  await sql`
-    UPDATE drills
-    SET name = ${data.name},
-        description = ${data.description},
-        instructions = ${data.instructions},
-        scoring_direction = ${data.scoring_direction},
-        max_score = ${data.max_score},
-        min_score = ${data.min_score},
-        unit = ${data.unit}
-    WHERE id = ${id}
-  `
+  const rows = await getRows('drills')
+  const row = rows.find(r => r.get('id') === id)
+  if (!row) throw new Error(`Drill not found: ${id}`)
+  row.set('name', data.name)
+  row.set('description', data.description)
+  row.set('instructions', data.instructions)
+  row.set('scoring_direction', data.scoring_direction)
+  row.set('max_score', data.max_score === null ? '' : String(data.max_score))
+  row.set('min_score', String(data.min_score))
+  row.set('unit', data.unit)
+  await row.save()
   revalidatePath('/drills')
 }
 
 export async function deleteDrill(id: string): Promise<{ error?: string }> {
   try {
-    await sql`DELETE FROM drills WHERE id = ${id}`
+    // Check for existing logs (replaces DB foreign key constraint)
+    const logRows = await getRows('drill_logs')
+    const hasLogs = logRows.some(r => r.get('drill_id') === id)
+    if (hasLogs) return { error: 'Cannot delete a drill that has recorded scores.' }
+
+    // Check for template references
+    const btdRows = await getRows('block_template_drills')
+    const inTemplate = btdRows.some(r => r.get('drill_id') === id)
+    if (inTemplate) return { error: 'Cannot delete a drill that is used in a template.' }
+
+    const rows = await getRows('drills')
+    const row = rows.find(r => r.get('id') === id)
+    if (!row) return { error: 'Drill not found.' }
+    await row.delete()
     revalidatePath('/drills')
     return {}
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e)
-    if (msg.includes('restrict') || msg.includes('RESTRICT') || msg.includes('foreign key')) {
-      return { error: 'Cannot delete a drill that has recorded scores.' }
-    }
-    return { error: msg }
+    return { error: e instanceof Error ? e.message : String(e) }
   }
 }

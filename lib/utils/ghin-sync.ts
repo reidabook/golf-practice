@@ -1,4 +1,4 @@
-import { sql } from '@/lib/db'
+import { getSheet, getRows, newId, today as todayStr, nowISO } from '@/lib/sheets'
 
 const GHIN_API_BASE = 'https://api2.ghin.com/api/v1'
 const FIREBASE_API_KEY = 'AIzaSyBxgTOAWxiud0HuaE5tN-5NTlzFnrtyz-I'
@@ -44,7 +44,6 @@ async function getGhinHandicapFromLogin(firebaseToken: string): Promise<number> 
   if (!res.ok) throw new Error(`GHIN login failed: ${res.status}`)
   const data = await res.json()
 
-  // The login response contains the golfer's own profile — extract handicap directly
   const golfer = data.golfer_user?.golfers?.[0]
   const display: string | undefined = golfer?.display
   if (!display) throw new Error('Handicap index not found in login response')
@@ -54,31 +53,31 @@ async function getGhinHandicapFromLogin(firebaseToken: string): Promise<number> 
 /**
  * Fetches the current GHIN handicap index and stores it as today's snapshot.
  * Skips silently if credentials aren't configured or a snapshot already exists today.
- * Returns { ok: false, error } if credentials are configured but sync fails.
  */
 export async function syncHandicapToday(): Promise<{ ok: boolean; error?: string }> {
-  const ghinNumberStr = process.env.GHIN_NUMBER
-  if (!ghinNumberStr || !process.env.GHIN_USERNAME || !process.env.GHIN_PASSWORD) {
+  if (!process.env.GHIN_NUMBER || !process.env.GHIN_USERNAME || !process.env.GHIN_PASSWORD) {
     return { ok: true }
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const today = todayStr()
 
     // Skip if we already have today's snapshot
-    const existing = await sql`
-      SELECT 1 FROM handicap_snapshots WHERE snapshot_date = ${today} LIMIT 1
-    `
-    if (existing.length > 0) return { ok: true }
+    const rows = await getRows('handicap_snapshots')
+    const existing = rows.some(r => r.get('snapshot_date') === today)
+    if (existing) return { ok: true }
 
     const firebaseToken = await getFirebaseToken()
     const handicapIndex = await getGhinHandicapFromLogin(firebaseToken)
 
-    await sql`
-      INSERT INTO handicap_snapshots (snapshot_date, handicap_index)
-      VALUES (${today}, ${handicapIndex})
-      ON CONFLICT (snapshot_date) DO UPDATE SET handicap_index = EXCLUDED.handicap_index
-    `
+    const sheet = await getSheet('handicap_snapshots')
+    await sheet.addRow({
+      id:             newId(),
+      snapshot_date:  today,
+      handicap_index: String(handicapIndex),
+      fetched_at:     nowISO(),
+    })
+
     return { ok: true }
   } catch (err) {
     console.error('[ghin-sync] Failed to sync handicap:', err)

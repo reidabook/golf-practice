@@ -1,172 +1,136 @@
-import { sql } from '@/lib/db'
+import { getRows, toObj, nullStr, today } from '@/lib/sheets'
+import { rowToDrill } from '@/lib/queries/drills'
 import type { ActiveBlockInfo, BlockWithDayLogs, TrainingBlock, Drill } from '@/lib/types'
 
-async function fetchBlockInfo(block: TrainingBlock): Promise<ActiveBlockInfo> {
-  const [statsRows, templateDrillRows] = await Promise.all([
-    sql`
-      SELECT
-        COUNT(*) FILTER (WHERE skipped = false AND score IS NOT NULL) AS completed_drills,
-        COUNT(*) FILTER (WHERE log_date = CURRENT_DATE AND skipped = false AND score IS NOT NULL) AS todays_drill_count
-      FROM drill_logs
-      WHERE block_id = ${block.id}
-    `,
-    sql`
-      SELECT COUNT(*) AS drill_count
-      FROM block_template_drills
-      WHERE template_id = ${block.template_id}
-    `,
-  ])
-  const completed_drills = Number(statsRows[0]?.completed_drills ?? 0)
-  const todays_drill_count = Number(statsRows[0]?.todays_drill_count ?? 0)
-  const template_drill_count = Number(templateDrillRows[0]?.drill_count ?? 0)
-  const total_drills = template_drill_count * block.target_sessions
-  return { block, completed_drills, total_drills, todays_drill_count }
+function rowToBlock(r: Record<string, string>): TrainingBlock {
+  return {
+    id:              r.id,
+    template_id:     nullStr(r.template_id),
+    name:            r.name,
+    target_sessions: Number(r.target_sessions),
+    status:          r.status as TrainingBlock['status'],
+    started_at:      r.started_at,
+    completed_at:    nullStr(r.completed_at),
+  }
 }
 
-// Returns all active blocks. Uses the current template name when the template still exists
-// so that renaming a template is reflected without needing to update each block row.
+async function fetchBlockInfo(
+  block: TrainingBlock,
+  allLogs: Record<string, string>[],
+  templateDrillCounts: Map<string, number>
+): Promise<ActiveBlockInfo> {
+  const blockLogs = allLogs.filter(l => l.block_id === block.id)
+  const scoredLogs = blockLogs.filter(l => l.skipped === 'false' && l.score !== '')
+  const todayLogs = scoredLogs.filter(l => l.log_date === today())
+
+  const drillCount = block.template_id ? (templateDrillCounts.get(block.template_id) ?? 0) : 0
+  const total_drills = drillCount * block.target_sessions
+
+  return {
+    block,
+    completed_drills: scoredLogs.length,
+    total_drills,
+    todays_drill_count: todayLogs.length,
+  }
+}
+
 export async function getActiveBlocks(): Promise<ActiveBlockInfo[]> {
-  const blockRows = await sql`
-    SELECT
-      tb.id,
-      tb.template_id,
-      COALESCE(bt.name, tb.name) AS name,
-      tb.target_sessions,
-      tb.status,
-      tb.started_at,
-      tb.completed_at
-    FROM training_blocks tb
-    LEFT JOIN block_templates bt ON bt.id = tb.template_id
-    WHERE tb.status = 'active'
-    ORDER BY tb.started_at DESC
-  `
-  if (blockRows.length === 0) return []
-  return Promise.all((blockRows as unknown as TrainingBlock[]).map(fetchBlockInfo))
+  const [blockRows, templateRows, btdRows, logRows] = await Promise.all([
+    getRows('training_blocks'),
+    getRows('block_templates'),
+    getRows('block_template_drills'),
+    getRows('drill_logs'),
+  ])
+
+  const templateMap = new Map(templateRows.map(toObj).map(r => [r.id, r]))
+  const allLogs = logRows.map(toObj)
+
+  // Count drills per template
+  const templateDrillCounts = new Map<string, number>()
+  for (const btd of btdRows.map(toObj)) {
+    templateDrillCounts.set(btd.template_id, (templateDrillCounts.get(btd.template_id) ?? 0) + 1)
+  }
+
+  const activeBlocks = blockRows
+    .map(toObj)
+    .filter(r => r.status === 'active')
+    .sort((a, b) => b.started_at.localeCompare(a.started_at))
+    .map(r => {
+      // Use current template name if available
+      const tmpl = r.template_id ? templateMap.get(r.template_id) : null
+      return rowToBlock({ ...r, name: tmpl?.name ?? r.name })
+    })
+
+  return Promise.all(activeBlocks.map(b => fetchBlockInfo(b, allLogs, templateDrillCounts)))
 }
 
 export async function getActiveBlock(): Promise<ActiveBlockInfo | null> {
-  const blockRows = await sql`
-    SELECT
-      tb.id,
-      tb.template_id,
-      COALESCE(bt.name, tb.name) AS name,
-      tb.target_sessions,
-      tb.status,
-      tb.started_at,
-      tb.completed_at
-    FROM training_blocks tb
-    LEFT JOIN block_templates bt ON bt.id = tb.template_id
-    WHERE tb.status = 'active'
-    ORDER BY tb.started_at DESC
-    LIMIT 1
-  `
-  if (!blockRows[0]) return null
-  return fetchBlockInfo(blockRows[0] as unknown as TrainingBlock)
+  const blocks = await getActiveBlocks()
+  return blocks[0] ?? null
 }
 
 export async function getBlocks(): Promise<TrainingBlock[]> {
-  const rows = await sql`
-    SELECT id, template_id, name, target_sessions, status, started_at, completed_at
-    FROM training_blocks
-    ORDER BY started_at DESC
-  `
-  return rows as unknown as TrainingBlock[]
+  const rows = await getRows('training_blocks')
+  return rows
+    .map(toObj)
+    .map(rowToBlock)
+    .sort((a, b) => b.started_at.localeCompare(a.started_at))
 }
 
 export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
-  const blockRows = await sql`
-    SELECT
-      tb.id,
-      tb.template_id,
-      COALESCE(bt.name, tb.name) AS name,
-      tb.target_sessions,
-      tb.status,
-      tb.started_at,
-      tb.completed_at,
-      bt.id            AS template_id_join,
-      bt.name          AS template_name,
-      bt.description   AS template_description,
-      bt.target_sessions AS template_target_sessions,
-      bt.is_default    AS template_is_default,
-      bt.created_at    AS template_created_at
-    FROM training_blocks tb
-    LEFT JOIN block_templates bt ON bt.id = tb.template_id
-    WHERE tb.id = ${id}
-  `
-  if (!blockRows[0]) return null
+  const [blockRows, templateRows, logRows, drillRows] = await Promise.all([
+    getRows('training_blocks'),
+    getRows('block_templates'),
+    getRows('drill_logs'),
+    getRows('drills'),
+  ])
 
-  const r = blockRows[0] as Record<string, unknown>
+  const blockRaw = blockRows.map(toObj).find(r => r.id === id)
+  if (!blockRaw) return null
+
+  const tmplRaw = blockRaw.template_id
+    ? templateRows.map(toObj).find(r => r.id === blockRaw.template_id)
+    : null
 
   const block: BlockWithDayLogs = {
-    id: r.id as string,
-    template_id: r.template_id as string | null,
-    name: r.name as string,
-    target_sessions: r.target_sessions as number,
-    status: r.status as 'active' | 'completed' | 'ended_early',
-    started_at: r.started_at as string,
-    completed_at: r.completed_at as string | null,
-    template: r.template_name
+    ...rowToBlock(blockRaw),
+    template: tmplRaw
       ? {
-          id: r.template_id_join as string,
-          name: r.template_name as string,
-          description: r.template_description as string | null,
-          target_sessions: r.template_target_sessions as number,
-          is_default: r.template_is_default as boolean,
-          created_at: r.template_created_at as string,
+          id:              tmplRaw.id,
+          name:            tmplRaw.name,
+          description:     nullStr(tmplRaw.description),
+          target_sessions: Number(tmplRaw.target_sessions),
+          is_default:      tmplRaw.is_default === 'true',
+          created_at:      tmplRaw.created_at,
         }
       : null,
     day_logs: [],
   }
 
-  const logRows = await sql`
-    SELECT
-      dl.id,
-      dl.drill_id,
-      dl.score,
-      dl.skipped,
-      dl.log_date::text AS log_date,
-      dl.created_at,
-      d.name        AS drill_name,
-      d.description AS drill_description,
-      d.instructions,
-      d.scoring_direction,
-      d.max_score,
-      d.min_score,
-      d.unit,
-      d.is_default,
-      d.created_at  AS drill_created_at
-    FROM drill_logs dl
-    JOIN drills d ON d.id = dl.drill_id
-    WHERE dl.block_id = ${id}
-    ORDER BY dl.log_date DESC, dl.created_at DESC
-  `
+  const drillMap = new Map(drillRows.map(toObj).map(r => [r.id, rowToDrill(r)]))
 
-  const dayMap = new Map<string, BlockWithDayLogs['day_logs'][number]>()
-  for (const row of logRows as Record<string, unknown>[]) {
-    const dateKey = String(row.log_date)
-    if (!dayMap.has(dateKey)) {
-      dayMap.set(dateKey, { log_date: dateKey, drills: [] })
-    }
-    dayMap.get(dateKey)!.drills.push({
-      id: row.id as string,
-      block_id: id,
-      drill_id: row.drill_id as string,
-      score: row.score !== null && row.score !== undefined ? Number(row.score) : null,
-      skipped: Boolean(row.skipped),
-      log_date: dateKey,
-      created_at: row.created_at as string,
-      drill: {
-        id: row.drill_id as string,
-        name: row.drill_name as string,
-        description: row.drill_description as string,
-        instructions: row.instructions as string,
-        scoring_direction: row.scoring_direction as Drill['scoring_direction'],
-        max_score: row.max_score as number | null,
-        min_score: row.min_score as number,
-        unit: row.unit as string,
-        is_default: row.is_default as boolean,
-        created_at: row.drill_created_at as string,
-      },
+  const blockLogs = logRows
+    .map(toObj)
+    .filter(r => r.block_id === id)
+    .sort((a, b) => {
+      const dateDiff = b.log_date.localeCompare(a.log_date)
+      return dateDiff !== 0 ? dateDiff : b.created_at.localeCompare(a.created_at)
+    })
+
+  const dayMap = new Map<string, { log_date: string; drills: BlockWithDayLogs['day_logs'][number]['drills'] }>()
+  for (const r of blockLogs) {
+    const drill = drillMap.get(r.drill_id)
+    if (!drill) continue
+    if (!dayMap.has(r.log_date)) dayMap.set(r.log_date, { log_date: r.log_date, drills: [] })
+    dayMap.get(r.log_date)!.drills.push({
+      id:        r.id,
+      block_id:  id,
+      drill_id:  r.drill_id,
+      score:     r.score === '' ? null : Number(r.score),
+      skipped:   r.skipped === 'true',
+      log_date:  r.log_date,
+      created_at: r.created_at,
+      drill,
     })
   }
 
@@ -174,24 +138,27 @@ export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
   return block
 }
 
-// Returns true when every drill in the block's template has been scored at least
-// target_sessions times. Returns false if the block is not active or has no drills.
 export async function isBlockComplete(blockId: string): Promise<boolean> {
-  const rows = await sql`
-    SELECT
-      BOOL_AND(session_count >= target_sessions) AS complete
-    FROM (
-      SELECT
-        btd.drill_id,
-        tb.target_sessions,
-        COUNT(dl.id) FILTER (WHERE dl.skipped = false AND dl.score IS NOT NULL) AS session_count
-      FROM training_blocks tb
-      JOIN block_template_drills btd ON btd.template_id = tb.template_id
-      LEFT JOIN drill_logs dl ON dl.drill_id = btd.drill_id AND dl.block_id = tb.id
-      WHERE tb.id = ${blockId}
-        AND tb.status = 'active'
-      GROUP BY btd.drill_id, tb.target_sessions
-    ) sub
-  `
-  return rows[0]?.complete === true
+  const [blockRows, btdRows, logRows] = await Promise.all([
+    getRows('training_blocks'),
+    getRows('block_template_drills'),
+    getRows('drill_logs'),
+  ])
+
+  const block = blockRows.map(toObj).find(r => r.id === blockId)
+  if (!block || block.status !== 'active' || !block.template_id) return false
+
+  const templateDrills = btdRows.map(toObj).filter(r => r.template_id === block.template_id)
+  if (templateDrills.length === 0) return false
+
+  const scoredLogs = logRows
+    .map(toObj)
+    .filter(r => r.block_id === blockId && r.skipped === 'false' && r.score !== '')
+
+  const target = Number(block.target_sessions)
+
+  return templateDrills.every(btd => {
+    const count = scoredLogs.filter(l => l.drill_id === btd.drill_id).length
+    return count >= target
+  })
 }
