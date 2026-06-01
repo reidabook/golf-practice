@@ -2,15 +2,15 @@
 
 ## Stack
 - **Framework:** Next.js 15 App Router — server components by default, `'use client'` only for interactivity
-- **Database:** Supabase (PostgreSQL) via `postgres.js` + `DATABASE_URL`. Connection: transaction pooler, `prepare: false`
+- **Data layer:** Google Sheets via `google-spreadsheet` + `google-auth-library`. Connection: JWT service account auth. See `lib/sheets.ts`.
 - **Deployment:** Vercel, auto-deploys `main` branch of `reidabook/golf-practice`
-- See `ARCHITECTURE.md` for routes, DB tables, and component map. See `features/` for feature specs.
+- See `ARCHITECTURE.md` for routes, sheet tabs, and component map. See `features/` for feature specs.
 
-## MANDATORY: Before any database schema change
-1. Snapshot first — run `SELECT * FROM drills; SELECT * FROM block_templates; SELECT * FROM block_template_drills; SELECT * FROM training_blocks; SELECT * FROM drill_logs;` and save output.
-2. Show the exact SQL to the user before running it.
-3. Get explicit confirmation ("yes, run it") before executing.
-4. Never DROP or TRUNCATE without confirmation — Supabase free plan has no self-serve backups.
+## MANDATORY: Before any data schema change
+1. Note which Google Sheet tab is affected.
+2. Show the user exactly what column changes are needed in the sheet and in the code before making them.
+3. Get explicit confirmation before editing any data files.
+4. Never delete rows or tabs without confirmation — there are no automatic backups.
 
 ## MANDATORY: Before any app change
 1. Read `FEATURES.md` index, then relevant `features/*.md` file(s), and `features/shared.md`.

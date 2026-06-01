@@ -15,39 +15,45 @@
 
 ## Data & Business Logic
 
+### Data Layer
+- Backend is Google Sheets. All reads use `getCachedRows(tabKey)` from `lib/sheets.ts`. All writes use `getRows(tabKey)` or `getSheet(tabKey)`, then call `invalidateSheetCache()` after the write.
+- All values are strings in the sheet — parse on read (`Number()`, `parseBool()`, `nullStr()`, etc.).
+- There are no foreign key constraints or uniqueness enforcement — these are handled in application code.
+
 ### Training Blocks
-- **Start block** from a template — creates a new block with a copy of the template name
-- **Block name display**: uses current template name if the template still exists (via `COALESCE(bt.name, tb.name)`), so renaming a template is reflected on active blocks
+- **Start block** from a template — creates a new row in `training-blocks` tab with a copy of the template name
+- **Block name display**: uses the current template name if the template still exists (loaded from `block-templates` tab and matched in JS), so renaming a template is reflected on active blocks
 - **Block status**: `active`, `completed`, `ended_early`
   - Active blocks appear on the home tab
   - Completed and ended-early blocks appear only in history with their correct status label
-- **Block deletion**: removes block + all associated drill logs permanently (requires confirmation)
+- **Block deletion**: removes block row + all associated drill log rows (cascaded manually in `deleteBlock` action)
 - **Block completion**: automatic when every drill reaches `target_sessions` → shows completion screen; or manually via "Mark Complete"
 - **End early**: sets status to `ended_early` via the drill list's End Early button; block moves to history
 - **Multiple active blocks**: allowed — no single-active constraint
 
 ### Sessions model
-- `target_sessions` on `training_blocks` and `block_templates`: how many times each drill must be scored (non-skipped) to finish the block
+- `target_sessions` on `training-blocks` and `block-templates` tabs: how many times each drill must be scored (non-skipped) to finish the block
 - Each non-skipped scored log = one session for that drill
 - Multiple sessions per calendar day are all counted
 - Block is complete when every drill's session count ≥ `target_sessions`
-- `isBlockComplete(blockId)` in `lib/queries/blocks.ts` is the canonical check
+- `isBlockComplete(blockId)` in `lib/queries/blocks.ts` is the canonical check — uses uncached `getRows` since it runs immediately after a write
 
 ### Drill Scoring
 - **Save score**: records score for a drill within the active block
 - **Skip drill**: marks drill as skipped (no score) for today
-- **Ad-hoc logging**: log a score for any drill outside a block — appears in Progress charts only
+- **Ad-hoc logging**: log a score for any drill outside a block — appears in Progress charts only (`block_id` stored as empty string)
 - **Score bounds**: enforced by +/− buttons and numpad clamp; buttons disabled at limits; default starting value is always `max(0, min_score)`
 - **Session tracking**: `getBlockDrills()` returns `session_count` per drill (total non-skipped logs in block)
 
 ### Analytics
 - **Personal best**: highest score (higher-is-better) or lowest (lower-is-better) across all logs for a drill
-- **Linear regression trend line**: calculated from all historical logs per drill
+- **Linear regression trend line**: calculated client-side from all historical logs per drill
 - **Scoring direction**: per-drill flag (higher/lower is better) used for trend color coding, personal best logic, and UI labels
 
 ### Date Handling
-- Stored as ISO format (YYYY-MM-DD) internally
+- Stored as `YYYY-MM-DD` string in the sheet
 - Displayed as "Mon, Jan 1" in the UI
+- `today()` helper in `lib/sheets.ts` returns today as `YYYY-MM-DD`
 
 ---
 
