@@ -19,9 +19,7 @@ interface DrillScoringClientProps {
 export function DrillScoringClient({ block, drillItem, blockId }: DrillScoringClientProps) {
   const router = useRouter()
   const { drill } = drillItem
-  // Start at 0, not at min_score — min_score is a floor for validation, not a default.
-  // (e.g. Safe Side Drill has min_score=-30 but should open at 0)
-  const defaultScore = Math.max(0, drill.min_score ?? 0)
+  const defaultScore = drill.min_score
   const draftKey = `drill-draft-${blockId}-${drill.id}`
   // Completion is dismissed per-session so "Keep Going" doesn't re-trigger on every save
   const completionDismissKey = `block-complete-dismissed-${blockId}`
