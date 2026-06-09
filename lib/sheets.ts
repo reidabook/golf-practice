@@ -10,6 +10,8 @@ export const TABS = {
   training_blocks:       'training-blocks',
   drill_logs:            'drill-logs',
   handicap_snapshots:    'handicap-snapshots',
+  rounds:                'rounds',
+  round_holes:           'round-holes',
 }
 
 // ─── Connection ────────────────────────────────────────────────────────────────
