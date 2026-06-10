@@ -58,12 +58,14 @@ function HoleForm({
   entry,
   onChange,
   onNext,
+  onBack,
   isLast,
 }: {
   holeIndex: number
   entry: HoleEntry
   onChange: (e: HoleEntry) => void
   onNext: () => void
+  onBack: (() => void) | null
   isLast: boolean
 }) {
   const par = PARS[holeIndex]
@@ -78,9 +80,20 @@ function HoleForm({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Hole {holeIndex + 1} of {HOLES}</p>
-          <p className="text-3xl font-bold">Par {par}</p>
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-muted-foreground hover:text-foreground transition-colors text-lg leading-none pb-0.5"
+              aria-label="Previous hole"
+            >
+              ←
+            </button>
+          )}
+          <div>
+            <p className="text-sm text-muted-foreground">Hole {holeIndex + 1} of {HOLES}</p>
+            <p className="text-3xl font-bold">Par {par}</p>
+          </div>
         </div>
       </div>
 
@@ -239,8 +252,9 @@ function Summary({ holes, date, onEdit }: { holes: HoleEntry[]; date: string; on
 
       {/* Scorecard */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-3 border-b border-border">
+        <div className="px-5 py-3 border-b border-border flex items-center justify-between">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scorecard</p>
+          <p className="text-xs text-muted-foreground">tap hole # to edit</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-center">
@@ -369,9 +383,18 @@ export default function RoundPage() {
   function handleNext() {
     if (editingFrom === 'summary') {
       setEditingFrom('wizard')
-      setStep(HOLES) // return to summary
+      setStep(HOLES)
     } else {
       setStep(s => s + 1)
+    }
+  }
+
+  function handleBack() {
+    if (editingFrom === 'summary') {
+      setEditingFrom('wizard')
+      setStep(HOLES)
+    } else {
+      setStep(s => s - 1)
     }
   }
 
@@ -390,6 +413,7 @@ export default function RoundPage() {
         entry={holes[step]}
         onChange={entry => updateHole(step, entry)}
         onNext={handleNext}
+        onBack={editingFrom === 'summary' ? handleBack : step > 0 ? handleBack : null}
         isLast={editingFrom === 'summary' || step === HOLES - 1}
       />
     </main>
