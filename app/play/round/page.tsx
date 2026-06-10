@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -165,6 +165,7 @@ function Summary({ holes, date, onEdit }: { holes: HoleEntry[]; date: string; on
     setSaveError(null)
     try {
       await saveRound(holes)
+      clearDraft()
       router.push('/play')
     } catch (e) {
       setSaving(false)
@@ -306,15 +307,34 @@ function Summary({ holes, date, onEdit }: { holes: HoleEntry[]; date: string; on
         >
           {saving ? 'Saving…' : 'Save Round'}
         </button>
-        <Link
-          href="/play"
-          className="flex-1 text-center py-3.5 bg-muted text-foreground rounded-xl font-medium text-sm hover:bg-muted/80 transition-colors"
+        <button
+          onClick={() => { clearDraft(); router.push('/play') }}
+          className="flex-1 py-3.5 bg-muted text-foreground rounded-xl font-medium text-sm hover:bg-muted/80 transition-colors"
         >
           Discard
-        </Link>
+        </button>
       </div>
     </div>
   )
+}
+
+const STORAGE_KEY = 'golf-round-in-progress'
+
+function loadDraft(): { step: number; holes: HoleEntry[] } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveDraft(step: number, holes: HoleEntry[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, holes }))
+}
+
+function clearDraft() {
+  localStorage.removeItem(STORAGE_KEY)
 }
 
 export default function RoundPage() {
@@ -322,6 +342,20 @@ export default function RoundPage() {
   const [editingFrom, setEditingFrom] = useState<'wizard' | 'summary'>('wizard')
   const [holes, setHoles] = useState<HoleEntry[]>(() => Array.from({ length: HOLES }, defaultHole))
   const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  // Restore draft on mount
+  useEffect(() => {
+    const draft = loadDraft()
+    if (draft) {
+      setStep(draft.step)
+      setHoles(draft.holes)
+    }
+  }, [])
+
+  // Persist draft on every change
+  useEffect(() => {
+    saveDraft(step, holes)
+  }, [step, holes])
 
   function updateHole(index: number, entry: HoleEntry) {
     setHoles(prev => prev.map((h, i) => (i === index ? entry : h)))
