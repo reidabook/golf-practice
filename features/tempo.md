@@ -29,9 +29,10 @@ Defined in `lib/tempo.ts` (pure, unit-tested in `lib/__tests__/tempo.test.ts`).
 - **Visual card**
   - Current preset (or BPM) in large mono type, with ms back / ms down and ratio
   - Track with a dot: moves right during the backswing, returns on the downswing, flashes green and grows at impact. Left marker = Start · Impact, right marker = Top
+  - Rest bar (3-tone only): fills at impact and drains to empty as the next rep approaches, with a "Next rep in N.Ns" countdown. Also runs during the lead-in before the first rep. Empty while swinging, when stopped, and after the rep when Repeat is off
   - Start / Stop button
 - **Tempo card**
-  - 3-tone: preset chips in a 3-column grid (frame label + total ms) — 5 for full swing, 6 for putting/chipping and per-mode help text
+  - 3-tone: preset chips in a 3-column grid (frame label only) — 5 for full swing, 6 for putting/chipping and per-mode help text
   - Metronome: − / slider / + BPM control
 - **Settings card**
   - Repeat toggle (3-tone only) — off plays a single rep then stops
@@ -43,7 +44,7 @@ Defined in `lib/tempo.ts` (pure, unit-tested in `lib/__tests__/tempo.test.ts`).
 ## Behaviour
 
 - **Tones**: three sine beeps — start 660 Hz, top 880 Hz, impact 1320 Hz. Metronome plays start and impact only.
-- **Timing**: beeps are scheduled on the Web Audio clock with a short lookahead (`lib/tempo-audio.ts → TempoEngine`), so spacing does not drift with JS timers. The dot reads the same clock.
+- **Timing**: beeps are scheduled on the Web Audio clock with a short lookahead (`lib/tempo-audio.ts → TempoEngine`), so spacing does not drift with JS timers. The dot and rest bar read the same clock.
 - **Start** must come from a tap — the `AudioContext` is created/resumed inside the handler (iOS requirement). `navigator.audioSession.type = 'playback'` is set when available so the iOS silent switch does not mute tones.
 - **Changing tempo while playing** restarts with the new timing. Volume changes apply live.
 - **Stops automatically** when the app is backgrounded, on leaving the page, and after a single rep when Repeat is off.

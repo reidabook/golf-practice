@@ -196,7 +196,7 @@ Recharts is client-side only. Pattern:
 ### "Tempo trainer"
 No data layer. Settings live in `localStorage` (`tempo-settings`).
 - `lib/tempo.ts` — presets (30fps frame counts), ratios, BPM helpers; pure and unit-tested
-- `lib/tempo-audio.ts` — `TempoEngine`: Web Audio beeps scheduled on the audio clock; also reports dot position for the visual
+- `lib/tempo-audio.ts` — `TempoEngine`: Web Audio beeps scheduled on the audio clock; also reports dot position and rest remaining for the visual
 - `components/tempo/tempo-page-client.tsx` — UI, wake lock, settings persistence
 
 ### "Scoring direction"
