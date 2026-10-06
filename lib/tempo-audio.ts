@@ -16,6 +16,10 @@ export interface TempoPosition {
   position: number
   /** true briefly after the impact tone */
   impact: boolean
+  /** seconds until the next rep starts; 0 while swinging or when no rep is coming */
+  restLeft: number
+  /** share of the current rest still to go, 1 → 0 */
+  restFraction: number
 }
 
 const LOOKAHEAD = 0.15 // seconds scheduled ahead of the audio clock
@@ -33,6 +37,8 @@ export class TempoEngine {
   private endTimer: ReturnType<typeof setTimeout> | null = null
   private config: TempoConfig | null = null
   private nextRep = 0
+  private firstRep = 0
+  private leadIn = 0
   private reps: number[] = []
   private live = new Set<OscillatorNode>()
 
@@ -58,7 +64,9 @@ export class TempoEngine {
 
     this.config = config
     this.setVolume(config.volume)
-    this.nextRep = this.ctx.currentTime + Math.max(config.gap, 0.5)
+    this.leadIn = Math.max(config.gap, 0.5)
+    this.firstRep = this.ctx.currentTime + this.leadIn
+    this.nextRep = this.firstRep
     this.reps = []
     this.timer = setInterval(() => this.schedule(), TICK_MS)
     this.schedule()
@@ -80,21 +88,32 @@ export class TempoEngine {
 
   /** Where the club should be right now — drives the visual. */
   getPosition(): TempoPosition {
-    const idle = { position: 0, impact: false }
+    const idle = { position: 0, impact: false, restLeft: 0, restFraction: 0 }
     if (!this.ctx || !this.config) return idle
     const now = this.ctx.currentTime
     let start: number | null = null
     for (const t of this.reps) {
       if (t <= now) start = t
     }
-    if (start === null) return idle
+    if (start === null) {
+      // Lead-in before the first rep
+      const left = this.firstRep - now
+      return left > 0 ? { ...idle, restLeft: left, restFraction: Math.min(1, left / this.leadIn) } : idle
+    }
     this.reps = this.reps.filter(t => t >= start!)
 
-    const { back, down } = this.config
+    const { back, down, gap, repeat } = this.config
     const e = now - start
-    if (e < back) return { position: e / back, impact: false }
-    if (e < back + down) return { position: 1 - (e - back) / down, impact: false }
-    return { position: 0, impact: e < back + down + IMPACT_FLASH }
+    if (e < back) return { ...idle, position: e / back }
+    if (e < back + down) return { ...idle, position: 1 - (e - back) / down }
+    const rested = e - back - down
+    const restLeft = repeat ? Math.max(0, gap - rested) : 0
+    return {
+      position: 0,
+      impact: rested < IMPACT_FLASH,
+      restLeft,
+      restFraction: gap > 0 ? restLeft / gap : 0,
+    }
   }
 
   dispose(): void {

@@ -77,6 +77,8 @@ export function TempoPageClient() {
   const wakeLockRef = useRef<WakeLock | null>(null)
   const startedKeyRef = useRef('')
   const dotRef = useRef<HTMLDivElement>(null)
+  const restBarRef = useRef<HTMLDivElement>(null)
+  const restLabelRef = useRef<HTMLSpanElement>(null)
 
   const { mode, presets, puttStyle, bpm, gap, repeat, volume } = settings
   const update = (patch: Partial<Settings>) => setSettings(s => ({ ...s, ...patch }))
@@ -158,13 +160,21 @@ export function TempoPageClient() {
     }
   }, [stop])
 
-  // Drive the dot from the audio clock
+  // Drive the dot and rest countdown from the audio clock
   useEffect(() => {
     const dot = dotRef.current
     if (!dot) return
+    // Rest elements are unmounted in metronome mode, so read the refs each time
+    const showRest = (fraction: number, seconds: number) => {
+      if (restBarRef.current) restBarRef.current.style.width = `${fraction * 100}%`
+      if (restLabelRef.current) {
+        restLabelRef.current.textContent = seconds > 0 ? `Next rep in ${seconds.toFixed(1)}s` : ''
+      }
+    }
     if (!playing) {
       dot.style.left = '0%'
       dot.dataset.impact = 'false'
+      showRest(0, 0)
       return
     }
     let raf = 0
@@ -173,6 +183,7 @@ export function TempoPageClient() {
       if (pos) {
         dot.style.left = `${pos.position * 100}%`
         dot.dataset.impact = String(pos.impact)
+        showRest(pos.restFraction, pos.restLeft)
       }
       raf = requestAnimationFrame(frame)
     }
@@ -247,6 +258,18 @@ export function TempoPageClient() {
           </div>
         </div>
 
+        {!metronome && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Rest</span>
+              <span ref={restLabelRef} className="font-mono tabular-nums" />
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div ref={restBarRef} className="h-full rounded-full bg-primary" style={{ width: '0%' }} />
+            </div>
+          </div>
+        )}
+
         <button
           onClick={playing ? stop : start}
           className={cn(
@@ -309,14 +332,11 @@ export function TempoPageClient() {
                   aria-pressed={active}
                   onClick={() => update({ presets: { ...presets, [mode]: p.id } })}
                   className={cn(
-                    'rounded-lg py-3 text-center transition-colors',
+                    'rounded-lg py-3 text-center font-semibold font-mono transition-colors',
                     active ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
                   )}
                 >
-                  <span className="block font-semibold font-mono">{p.id}</span>
-                  <span className={cn('block text-[11px]', active ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
-                    {framesToMs(p.back + p.down)} ms
-                  </span>
+                  {p.id}
                 </button>
               )
             })}
