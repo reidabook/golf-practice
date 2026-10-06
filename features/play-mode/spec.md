@@ -1,5 +1,7 @@
 # Play Mode — Feature Spec
 
+> **Status (2026-10-06):** Hidden. The Play nav tab was replaced by Tempo. Routes `/play` and `/play/round` and all code remain and work by direct URL. To restore, add the tab back in `components/nav/bottom-nav.tsx`.
+
 Tracks per-hole stats during an actual round using The Scoring Method by Will Robins. Produces a post-round summary that maps weaknesses to focus areas.
 
 ---
