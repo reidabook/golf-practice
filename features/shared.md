@@ -6,7 +6,8 @@
 
 ## Navigation
 
-- Bottom tab bar with 4 tabs: Home, History, Progress, Drills
+- Bottom tab bar with 6 tabs: Home, History, Progress, Drills, Plan, Tempo
+- Play Mode (`/play`, `/play/round`) is hidden — no nav tab, reachable by direct URL only
 - Sticky, safe-area aware (notch devices)
 - Breadcrumb navigation on nested screens (e.g., History > Block Name)
 - Back buttons on all nested screens

@@ -93,6 +93,8 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 | `/blocks/:blockId/drills/:drillId` | `app/blocks/[blockId]/drills/[drillId]/page.tsx` | Single drill full-screen scorer |
 | `/progress` | `app/progress/page.tsx` | All-time line charts per drill |
 | `/drills` | `app/drills/page.tsx` | Block templates + drill library CRUD |
+| `/tempo` | `app/tempo/page.tsx` | Tempo trainer — client-only (`components/tempo/tempo-page-client.tsx`), no sheet access |
+| `/play`, `/play/round` | `app/play/page.tsx`, `app/play/round/page.tsx` | Play Mode — hidden: not linked from nav, reachable by URL only |
 | `/api/debug` | `app/api/debug/route.ts` | Connection diagnostics — remove before production |
 
 ---
@@ -190,6 +192,12 @@ Recharts is client-side only. Pattern:
 - `app/progress/page.tsx` (server) fetches data → passes to `ProgressChartClient`
 - `components/progress/progress-chart-client.tsx` (`'use client'`) uses `dynamic()` with `ssr: false`
 - `components/progress/progress-chart.tsx` is the actual Recharts component
+
+### "Tempo trainer"
+No data layer. Settings live in `localStorage` (`tempo-settings`).
+- `lib/tempo.ts` — presets (30fps frame counts), ratios, BPM helpers; pure and unit-tested
+- `lib/tempo-audio.ts` — `TempoEngine`: Web Audio beeps scheduled on the audio clock; also reports dot position for the visual
+- `components/tempo/tempo-page-client.tsx` — UI, wake lock, settings persistence
 
 ### "Scoring direction"
 Per-drill flag (`higher_better` / `lower_better`). Used for trend color, personal best logic, and UI labels.
