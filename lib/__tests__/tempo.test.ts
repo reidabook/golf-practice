@@ -32,6 +32,13 @@ describe('PRESETS', () => {
     for (const p of [...PRESETS.putting, ...PRESETS.chipping]) expect(p.back / p.down).toBe(2)
   })
 
+  it('offers the expected tempos per mode', () => {
+    expect(PRESETS.full.map(p => p.id)).toEqual(['18/6', '21/7', '24/8', '27/9', '30/10'])
+    const short = ['14/7', '16/8', '18/9', '20/10', '22/11', '24/12']
+    expect(PRESETS.putting.map(p => p.id)).toEqual(short)
+    expect(PRESETS.chipping.map(p => p.id)).toEqual(short)
+  })
+
   it('every mode has a default that exists in its presets', () => {
     for (const { id } of MODES) {
       expect(PRESETS[id].some(p => p.id === DEFAULT_PRESET[id])).toBe(true)
