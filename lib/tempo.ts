@@ -49,6 +49,8 @@ const SHORT_PRESETS: TempoPreset[] = [
   { id: '16/8', back: 16, down: 8 },
   { id: '18/9', back: 18, down: 9 },
   { id: '20/10', back: 20, down: 10 },
+  { id: '22/11', back: 22, down: 11 },
+  { id: '24/12', back: 24, down: 12 },
 ]
 
 export const PRESETS: Record<TempoMode, TempoPreset[]> = {
@@ -59,6 +61,7 @@ export const PRESETS: Record<TempoMode, TempoPreset[]> = {
     { id: '21/7', back: 21, down: 7 },
     { id: '24/8', back: 24, down: 8 },
     { id: '27/9', back: 27, down: 9 },
+    { id: '30/10', back: 30, down: 10 },
   ],
 }
 

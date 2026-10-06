@@ -300,7 +300,7 @@ export function TempoPageClient() {
       ) : (
         <div className="rounded-xl border border-border bg-card p-5 space-y-3">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tempo</p>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {PRESETS[mode].map(p => {
               const active = p.id === preset.id
               return (

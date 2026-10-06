@@ -12,9 +12,9 @@ Presets are frame counts of 30fps video (Tour Tempo convention): `back/down` = f
 
 | Mode | Ratio | Presets | Default |
 |---|---|---|---|
-| Putting | 2:1 | 14/7, 16/8, 18/9, 20/10 | 18/9 |
-| Chipping | 2:1 | 14/7, 16/8, 18/9, 20/10 | 18/9 |
-| Full swing | 3:1 | 18/6, 21/7, 24/8, 27/9 | 24/8 |
+| Putting | 2:1 | 14/7, 16/8, 18/9, 20/10, 22/11, 24/12 | 18/9 |
+| Chipping | 2:1 | 14/7, 16/8, 18/9, 20/10, 22/11, 24/12 | 18/9 |
+| Full swing | 3:1 | 18/6, 21/7, 24/8, 27/9, 30/10 | 24/8 |
 
 Putting also has a **Metronome** cue: 60–90 BPM (default 76). Takeaway on the low tick, impact on the high tick, one beat of rest, repeat.
 
@@ -31,7 +31,7 @@ Defined in `lib/tempo.ts` (pure, unit-tested in `lib/__tests__/tempo.test.ts`).
   - Track with a dot: moves right during the backswing, returns on the downswing, flashes green and grows at impact. Left marker = Start · Impact, right marker = Top
   - Start / Stop button
 - **Tempo card**
-  - 3-tone: four preset chips (frame label + total ms) and per-mode help text
+  - 3-tone: preset chips in a 3-column grid (frame label + total ms) — 5 for full swing, 6 for putting/chipping and per-mode help text
   - Metronome: − / slider / + BPM control
 - **Settings card**
   - Repeat toggle (3-tone only) — off plays a single rep then stops
