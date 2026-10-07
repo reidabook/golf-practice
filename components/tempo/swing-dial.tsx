@@ -2,14 +2,10 @@
 
 import { useEffect, useRef, type RefObject } from 'react'
 import type { TempoEngine } from '@/lib/tempo-audio'
-import { SWING_ANIMATION, ballGone, putterAngle, swingFrame, type TempoMode } from '@/lib/tempo'
-import { GOLFER_BALL, GOLFER_FRAMES, GOLFER_PUTTER } from '@/components/tempo/golfer-frames'
+import { SWING_ANIMATION, ballGone, swingFrame, type TempoMode } from '@/lib/tempo'
+import { GOLFER_BALL, GOLFER_FRAMES } from '@/components/tempo/golfer-frames'
 
 type Phase = 'idle' | 'swing' | 'impact' | 'rest'
-
-function putterTransform(angle: number): string {
-  return `rotate(${angle} ${GOLFER_PUTTER.x1} ${GOLFER_PUTTER.y1})`
-}
 
 /**
  * Circular swing visual. The ring is laid out like the swing: start and impact at
@@ -29,7 +25,6 @@ export function SwingDial({
 }) {
   const ringRef = useRef<SVGCircleElement>(null)
   const golferRef = useRef<SVGGElement>(null)
-  const putterRef = useRef<SVGGElement>(null)
   const ballRef = useRef<SVGCircleElement>(null)
   const labelRef = useRef<HTMLParagraphElement>(null)
 
@@ -41,7 +36,6 @@ export function SwingDial({
       progress: number,
       restLeft: number,
       swing = 0,
-      position = 0,
       sinceImpact: number | null = null
     ) => {
       const ring = ringRef.current
@@ -57,7 +51,6 @@ export function SwingDial({
           ;(poses[i] as SVGPathElement).style.display = i === frame ? '' : 'none'
         }
       }
-      putterRef.current?.setAttribute('transform', putterTransform(putterAngle(position, sinceImpact)))
       if (ballRef.current) ballRef.current.style.display = ballGone(anim, sinceImpact) ? 'none' : ''
       if (labelRef.current) {
         labelRef.current.textContent = restLeft > 0 ? `Next rep in ${restLeft.toFixed(1)}s` : ''
@@ -73,7 +66,7 @@ export function SwingDial({
       if (pos) {
         const phase = pos.swing > 0 ? 'swing' : pos.impact ? 'impact' : pos.restLeft > 0 ? 'rest' : 'idle'
         const progress = phase === 'swing' ? pos.swing : phase === 'impact' ? 1 : phase === 'rest' ? pos.restFraction : 0
-        draw(phase, progress, phase === 'swing' ? 0 : pos.restLeft, pos.swing, pos.position, pos.sinceImpact)
+        draw(phase, progress, phase === 'swing' ? 0 : pos.restLeft, pos.swing, pos.sinceImpact)
       }
       raf = requestAnimationFrame(frame)
     }
@@ -108,13 +101,6 @@ export function SwingDial({
         <line x1="100" y1="4" x2="100" y2="20" strokeWidth="2" className="stroke-muted-foreground" />
         <line x1="100" y1="180" x2="100" y2="196" strokeWidth="2" className="stroke-muted-foreground" />
 
-        {/* Putting: the putter is drawn here and swings as a pendulum behind a single traced pose */}
-        {mode === 'putting' && (
-          <g ref={putterRef} transform={putterTransform(0)} strokeLinecap="round" className="stroke-foreground">
-            <line x1={GOLFER_PUTTER.x1} y1={GOLFER_PUTTER.y1} x2={GOLFER_PUTTER.x2} y2={GOLFER_PUTTER.y2} strokeWidth="1.4" />
-            <line x1={GOLFER_PUTTER.x2 - 3} y1={GOLFER_PUTTER.y2} x2={GOLFER_PUTTER.x2 + 1} y2={GOLFER_PUTTER.y2} strokeWidth="2.6" />
-          </g>
-        )}
         {/* Golfer silhouette, face-on: one traced path per pose, only the current one shown */}
         <g key={mode} ref={golferRef} fillRule="evenodd" className="fill-foreground">
           {GOLFER_FRAMES[mode].map((d, i) => (

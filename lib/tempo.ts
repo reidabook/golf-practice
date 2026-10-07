@@ -88,10 +88,30 @@ const IMPACT_HOLD = 0.06
 
 // Frame order comes from MODES in scripts/trace-golfer.py (see GOLFER_POSES in components/tempo/golfer-frames.ts)
 export const SWING_ANIMATION: Record<TempoMode, SwingAnimation> = {
-  // The putting golfer is a single pose; the putter itself swings (putterAngle)
-  putting: { back: [0], down: [0], impact: 0, after: [{ until: 0.6, frame: 0 }] },
-  // 0 setup, 1 early takeaway, 2 mid takeaway, 3 waist-high, 4 downswing, 5 approach, 6 impact, 7 follow-through
-  chipping: { back: [0, 1, 2], down: [3, 2, 4, 5], impact: 6, after: [{ until: 1.1, frame: 7 }] },
+  // 0 setup, 1 pre-stroke, 2 takeaway, 3 mid takeaway, 4 transition, 5 forward stroke, 6 impact,
+  // 7 early follow-through, 8 mid follow-through, 9 finish. Resets by 0.6 s to fit the fastest metronome beat.
+  putting: {
+    back: [0, 1, 2, 3],
+    down: [4, 5],
+    impact: 6,
+    after: [
+      { until: 0.15, frame: 7 },
+      { until: 0.3, frame: 8 },
+      { until: 0.6, frame: 9 },
+    ],
+  },
+  // 0 setup, 1 early takeaway, 2 mid takeaway, 3 waist-high, 4 top, 5 downswing, 6 approach, 7 impact,
+  // 8 early follow-through, 9 follow-through, 10 finish
+  chipping: {
+    back: [0, 1, 2, 3],
+    down: [4, 3, 2, 5, 6],
+    impact: 7,
+    after: [
+      { until: 0.14, frame: 8 },
+      { until: 0.35, frame: 9 },
+      { until: 1.1, frame: 10 },
+    ],
+  },
   // 0 setup, 1 takeaway, 2 hip-high, 3 halfway, 4 chest-high, 5 three-quarter, 6 head-high, 7 top,
   // 8 downswing, 9 approach, 10 impact, 11 release, 12 follow-through, 13 finish
   full: {
@@ -122,24 +142,6 @@ export function swingFrame(anim: SwingAnimation, swing: number, sinceImpact: num
 /** True once the ball has been hit, until the golfer resets to setup. */
 export function ballGone(anim: SwingAnimation, sinceImpact: number | null): boolean {
   return sinceImpact !== null && sinceImpact >= IMPACT_HOLD && sinceImpact < anim.after[anim.after.length - 1].until
-}
-
-const PUTTER_BACK = 10 // degrees the putter swings back
-const PUTTER_THROUGH = 14 // degrees it swings through past the ball
-const PUTTER_THROUGH_AT = 0.25 // seconds after impact to reach the end of the follow-through
-const PUTTER_HOLD_UNTIL = 0.45
-const PUTTER_RESET_AT = 0.6 // back at the ball; short enough for the fastest metronome beat
-
-/**
- * Putter rotation about the hands, in degrees: positive swings the head back (viewer's left),
- * negative through toward the target. `position` is 0 at address/impact and 1 at the top of the stroke.
- */
-export function putterAngle(position: number, sinceImpact: number | null): number {
-  if (position > 0) return position * PUTTER_BACK
-  if (sinceImpact === null || sinceImpact >= PUTTER_RESET_AT) return 0
-  if (sinceImpact < PUTTER_THROUGH_AT) return -PUTTER_THROUGH * (sinceImpact / PUTTER_THROUGH_AT)
-  if (sinceImpact < PUTTER_HOLD_UNTIL) return -PUTTER_THROUGH
-  return -PUTTER_THROUGH * ((PUTTER_RESET_AT - sinceImpact) / (PUTTER_RESET_AT - PUTTER_HOLD_UNTIL))
 }
 
 export function framesToMs(frames: number): number {
