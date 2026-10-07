@@ -197,8 +197,8 @@ Recharts is client-side only. Pattern:
 No data layer. Settings live in `localStorage` (`tempo-settings`).
 - `lib/tempo.ts` — presets (30fps frame counts), ratios, BPM helpers; pure and unit-tested
 - `lib/tempo-audio.ts` — `TempoEngine`: Web Audio beeps scheduled on the audio clock; also reports swing position and rest remaining for the visual
-- `components/tempo/swing-dial.tsx` — circular ring + golfer silhouette SVG (pose chosen by `swingFrame` in `lib/tempo.ts`), animated from the engine via `requestAnimationFrame`
-- `components/tempo/golfer-frames.ts` — GENERATED golfer pose paths; regenerate with `python3 scripts/trace-golfer.py` (needs `opencv-python`, `numpy`) from `scripts/assets/golfer-reference.png` + `golfer-inbetweens.png`
+- `components/tempo/swing-dial.tsx` — circular ring + golfer silhouette SVG (pose per shot type chosen by `SWING_ANIMATION` / `swingFrame`, putter by `putterAngle`, in `lib/tempo.ts`), animated from the engine via `requestAnimationFrame`
+- `components/tempo/golfer-frames.ts` — GENERATED golfer pose paths; regenerate with `python3 scripts/trace-golfer.py` (needs `opencv-python`, `numpy`) from the pose sheets in `scripts/assets/` (full swing, chipping, putting)
 - `components/tempo/tempo-page-client.tsx` — UI, wake lock, settings persistence
 
 ### "Scoring direction"
