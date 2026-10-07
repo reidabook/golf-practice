@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   PRESETS,
   DEFAULT_PRESET,
+  ANIMATES_GOLFER,
+  swingFrame,
   MODES,
   BPM_MIN,
   BPM_MAX,
@@ -43,6 +45,37 @@ describe('PRESETS', () => {
     for (const { id } of MODES) {
       expect(PRESETS[id].some(p => p.id === DEFAULT_PRESET[id])).toBe(true)
     }
+  })
+})
+
+describe('swingFrame', () => {
+  it('only full swing animates the golfer', () => {
+    expect(ANIMATES_GOLFER).toEqual({ putting: false, chipping: false, full: true })
+  })
+
+  it('steps through the seven backswing poses in order, reaching top on the top tone', () => {
+    const seen = []
+    for (let i = 0; i < 7; i++) seen.push(swingFrame((i + 0.5) / 14, null))
+    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6])
+    expect(swingFrame(0.5, null)).toBe(7)
+  })
+
+  it('comes back down the same path, then into downswing and approach', () => {
+    const seen = []
+    for (let i = 0; i < 8; i++) seen.push(swingFrame(0.5 + (i + 0.5) / 16, null))
+    expect(seen).toEqual([7, 6, 5, 4, 3, 2, 8, 9])
+  })
+
+  it('shows impact on the impact tone, then release, follow-through, finish and back to setup', () => {
+    expect(swingFrame(0, 0)).toBe(10)
+    expect(swingFrame(0, 0.1)).toBe(11)
+    expect(swingFrame(0, 0.2)).toBe(12)
+    expect(swingFrame(0, 0.6)).toBe(13)
+    expect(swingFrame(0, 1.5)).toBe(0)
+  })
+
+  it('holds setup before the first rep', () => {
+    expect(swingFrame(0, null)).toBe(0)
   })
 })
 

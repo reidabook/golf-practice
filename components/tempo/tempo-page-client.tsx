@@ -5,6 +5,7 @@ import { Minus, Play, Plus, Square } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { TempoEngine } from '@/lib/tempo-audio'
+import { SwingDial } from '@/components/tempo/swing-dial'
 import {
   BPM_DEFAULT,
   BPM_MAX,
@@ -13,6 +14,7 @@ import {
   GAP_OPTIONS,
   MODES,
   PRESETS,
+  ANIMATES_GOLFER,
   clampBpm,
   framesToMs,
   getPreset,
@@ -76,9 +78,6 @@ export function TempoPageClient() {
   const engineRef = useRef<TempoEngine | null>(null)
   const wakeLockRef = useRef<WakeLock | null>(null)
   const startedKeyRef = useRef('')
-  const dotRef = useRef<HTMLDivElement>(null)
-  const restBarRef = useRef<HTMLDivElement>(null)
-  const restLabelRef = useRef<HTMLSpanElement>(null)
 
   const { mode, presets, puttStyle, bpm, gap, repeat, volume } = settings
   const update = (patch: Partial<Settings>) => setSettings(s => ({ ...s, ...patch }))
@@ -160,37 +159,6 @@ export function TempoPageClient() {
     }
   }, [stop])
 
-  // Drive the dot and rest countdown from the audio clock
-  useEffect(() => {
-    const dot = dotRef.current
-    if (!dot) return
-    // Rest elements are unmounted in metronome mode, so read the refs each time
-    const showRest = (fraction: number, seconds: number) => {
-      if (restBarRef.current) restBarRef.current.style.width = `${fraction * 100}%`
-      if (restLabelRef.current) {
-        restLabelRef.current.textContent = seconds > 0 ? `Next rep in ${seconds.toFixed(1)}s` : ''
-      }
-    }
-    if (!playing) {
-      dot.style.left = '0%'
-      dot.dataset.impact = 'false'
-      showRest(0, 0)
-      return
-    }
-    let raf = 0
-    const frame = () => {
-      const pos = engineRef.current?.getPosition()
-      if (pos) {
-        dot.style.left = `${pos.position * 100}%`
-        dot.dataset.impact = String(pos.impact)
-        showRest(pos.restFraction, pos.restLeft)
-      }
-      raf = requestAnimationFrame(frame)
-    }
-    raf = requestAnimationFrame(frame)
-    return () => cancelAnimationFrame(raf)
-  }, [playing])
-
   const strokeMs = Math.round((timing.back + timing.down) * 1000)
 
   return (
@@ -240,35 +208,7 @@ export function TempoPageClient() {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <div className="relative h-10 mx-4">
-            <div className="absolute top-1/2 left-0 right-0 h-1 -translate-y-1/2 rounded-full bg-muted" />
-            <div className="absolute top-1/2 left-0 w-0.5 h-5 -translate-x-1/2 -translate-y-1/2 bg-muted-foreground" />
-            <div className="absolute top-1/2 right-0 w-0.5 h-5 translate-x-1/2 -translate-y-1/2 bg-muted-foreground" />
-            <div
-              ref={dotRef}
-              data-impact="false"
-              className="absolute top-1/2 w-7 h-7 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground data-[impact=true]:bg-primary data-[impact=true]:scale-150 data-[impact=true]:shadow-[0_0_24px_hsl(var(--primary))]"
-              style={{ left: '0%' }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Start · Impact</span>
-            <span>Top</span>
-          </div>
-        </div>
-
-        {!metronome && (
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Rest</span>
-              <span ref={restLabelRef} className="font-mono tabular-nums" />
-            </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div ref={restBarRef} className="h-full rounded-full bg-primary" style={{ width: '0%' }} />
-            </div>
-          </div>
-        )}
+        <SwingDial engineRef={engineRef} playing={playing} animate={ANIMATES_GOLFER[mode]} showCountdown={!metronome} />
 
         <button
           onClick={playing ? stop : start}

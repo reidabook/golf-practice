@@ -71,6 +71,43 @@ export const DEFAULT_PRESET: Record<TempoMode, string> = {
   full: '24/8',
 }
 
+/** Shot types with golfer poses to animate; the others hold the setup pose. */
+export const ANIMATES_GOLFER: Record<TempoMode, boolean> = {
+  putting: false,
+  chipping: false,
+  full: true,
+}
+
+// Indexes into GOLFER_FRAMES (components/tempo/golfer-frames.ts):
+// 0 setup, 1 takeaway, 2 hip-high, 3 halfway, 4 chest-high, 5 three-quarter, 6 head-high, 7 top,
+// 8 downswing, 9 approach, 10 impact, 11 release, 12 follow-through, 13 finish
+const BACK_FRAMES = [0, 1, 2, 3, 4, 5, 6]
+const DOWN_FRAMES = [7, 6, 5, 4, 3, 2, 8, 9]
+const IMPACT_FRAME = 10
+/** First pose in which the ball has been hit. */
+export const BALL_GONE_FRAME = 11
+// Seconds after impact at which each later pose ends
+const IMPACT_HOLD = 0.06
+const RELEASE_END = 0.14
+const FOLLOW_THROUGH_END = 0.3
+const FINISH_END = 1.1
+
+/**
+ * Golfer pose for the swing dial. `swing` is the ring progress (0 → 0.5 backswing, 0.5 → 1 downswing),
+ * `sinceImpact` the seconds since the impact tone (null before it). Top lands exactly on the top tone
+ * and impact on the impact tone; the follow-through plays into the rest, then the golfer resets to setup.
+ */
+export function swingFrame(swing: number, sinceImpact: number | null): number {
+  if (swing > 0 && swing < 0.5) return BACK_FRAMES[Math.floor(swing * 2 * BACK_FRAMES.length)]
+  if (swing >= 0.5 && swing < 1) return DOWN_FRAMES[Math.floor((swing - 0.5) * 2 * DOWN_FRAMES.length)]
+  if (sinceImpact === null) return 0
+  if (sinceImpact < IMPACT_HOLD) return IMPACT_FRAME
+  if (sinceImpact < RELEASE_END) return 11
+  if (sinceImpact < FOLLOW_THROUGH_END) return 12
+  if (sinceImpact < FINISH_END) return 13
+  return 0
+}
+
 export function framesToMs(frames: number): number {
   return Math.round((frames * 1000) / FPS)
 }

@@ -16,6 +16,10 @@ export interface TempoPosition {
   position: number
   /** true briefly after the impact tone */
   impact: boolean
+  /** ring progress through the swing: 0 → 0.5 over the backswing, 0.5 → 1 over the downswing; 0 when not swinging */
+  swing: number
+  /** seconds since the impact tone of the current rep; null before impact */
+  sinceImpact: number | null
   /** seconds until the next rep starts; 0 while swinging or when no rep is coming */
   restLeft: number
   /** share of the current rest still to go, 1 → 0 */
@@ -88,7 +92,7 @@ export class TempoEngine {
 
   /** Where the club should be right now — drives the visual. */
   getPosition(): TempoPosition {
-    const idle = { position: 0, impact: false, restLeft: 0, restFraction: 0 }
+    const idle = { position: 0, impact: false, swing: 0, sinceImpact: null, restLeft: 0, restFraction: 0 }
     if (!this.ctx || !this.config) return idle
     const now = this.ctx.currentTime
     let start: number | null = null
@@ -104,13 +108,18 @@ export class TempoEngine {
 
     const { back, down, gap, repeat } = this.config
     const e = now - start
-    if (e < back) return { ...idle, position: e / back }
-    if (e < back + down) return { ...idle, position: 1 - (e - back) / down }
+    if (e < back) return { ...idle, position: e / back, swing: (e / back) / 2 }
+    if (e < back + down) {
+      const d = (e - back) / down
+      return { ...idle, position: 1 - d, swing: 0.5 + d / 2 }
+    }
     const rested = e - back - down
     const restLeft = repeat ? Math.max(0, gap - rested) : 0
     return {
       position: 0,
       impact: rested < IMPACT_FLASH,
+      swing: 0,
+      sinceImpact: rested,
       restLeft,
       restFraction: gap > 0 ? restLeft / gap : 0,
     }
