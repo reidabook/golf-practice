@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   PRESETS,
   DEFAULT_PRESET,
-  ANIMATES_GOLFER,
+  SWING_ANIMATION,
   swingFrame,
+  ballGone,
+  putterAngle,
   MODES,
   BPM_MIN,
   BPM_MAX,
@@ -48,34 +50,82 @@ describe('PRESETS', () => {
   })
 })
 
-describe('swingFrame', () => {
-  it('only full swing animates the golfer', () => {
-    expect(ANIMATES_GOLFER).toEqual({ putting: false, chipping: false, full: true })
-  })
+describe('swingFrame — full swing', () => {
+  const full = SWING_ANIMATION.full
 
   it('steps through the seven backswing poses in order, reaching top on the top tone', () => {
     const seen = []
-    for (let i = 0; i < 7; i++) seen.push(swingFrame((i + 0.5) / 14, null))
+    for (let i = 0; i < 7; i++) seen.push(swingFrame(full, (i + 0.5) / 14, null))
     expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6])
-    expect(swingFrame(0.5, null)).toBe(7)
+    expect(swingFrame(full, 0.5, null)).toBe(7)
   })
 
   it('comes back down the same path, then into downswing and approach', () => {
     const seen = []
-    for (let i = 0; i < 8; i++) seen.push(swingFrame(0.5 + (i + 0.5) / 16, null))
+    for (let i = 0; i < 8; i++) seen.push(swingFrame(full, 0.5 + (i + 0.5) / 16, null))
     expect(seen).toEqual([7, 6, 5, 4, 3, 2, 8, 9])
   })
 
   it('shows impact on the impact tone, then release, follow-through, finish and back to setup', () => {
-    expect(swingFrame(0, 0)).toBe(10)
-    expect(swingFrame(0, 0.1)).toBe(11)
-    expect(swingFrame(0, 0.2)).toBe(12)
-    expect(swingFrame(0, 0.6)).toBe(13)
-    expect(swingFrame(0, 1.5)).toBe(0)
+    expect(swingFrame(full, 0, 0)).toBe(10)
+    expect(swingFrame(full, 0, 0.1)).toBe(11)
+    expect(swingFrame(full, 0, 0.2)).toBe(12)
+    expect(swingFrame(full, 0, 0.6)).toBe(13)
+    expect(swingFrame(full, 0, 1.5)).toBe(0)
   })
 
   it('holds setup before the first rep', () => {
-    expect(swingFrame(0, null)).toBe(0)
+    expect(swingFrame(full, 0, null)).toBe(0)
+  })
+})
+
+describe('swingFrame — chipping', () => {
+  const chip = SWING_ANIMATION.chipping
+
+  it('goes back to waist-high on the top tone and down to impact on the impact tone', () => {
+    expect(swingFrame(chip, 0.01, null)).toBe(0)
+    expect(swingFrame(chip, 0.49, null)).toBe(2)
+    expect(swingFrame(chip, 0.5, null)).toBe(3)
+    expect(swingFrame(chip, 0.99, null)).toBe(5)
+    expect(swingFrame(chip, 0, 0)).toBe(6)
+  })
+
+  it('holds the follow-through, then resets', () => {
+    expect(swingFrame(chip, 0, 0.5)).toBe(7)
+    expect(swingFrame(chip, 0, 1.2)).toBe(0)
+  })
+})
+
+describe('ballGone', () => {
+  it('ball is there through impact, gone during the follow-through, back on reset', () => {
+    for (const anim of Object.values(SWING_ANIMATION)) {
+      expect(ballGone(anim, null)).toBe(false)
+      expect(ballGone(anim, 0)).toBe(false)
+      expect(ballGone(anim, 0.3)).toBe(true)
+      expect(ballGone(anim, 2)).toBe(false)
+    }
+  })
+})
+
+describe('putting', () => {
+  it('golfer body stays in the setup pose', () => {
+    const putt = SWING_ANIMATION.putting
+    for (const s of [0.1, 0.5, 0.9]) expect(swingFrame(putt, s, null)).toBe(0)
+    expect(swingFrame(putt, 0, 0.2)).toBe(0)
+  })
+
+  it('putter swings back with the stroke and returns to the ball at impact', () => {
+    expect(putterAngle(0, null)).toBe(0)
+    expect(putterAngle(0.5, null)).toBeCloseTo(5)
+    expect(putterAngle(1, null)).toBeCloseTo(10)
+    expect(putterAngle(0, 0)).toBeCloseTo(0)
+  })
+
+  it('putter follows through past the ball, holds, then resets', () => {
+    expect(putterAngle(0, 0.125)).toBeCloseTo(-7)
+    expect(putterAngle(0, 0.3)).toBe(-14)
+    expect(putterAngle(0, 0.525)).toBeCloseTo(-7)
+    expect(putterAngle(0, 0.7)).toBe(0)
   })
 })
 

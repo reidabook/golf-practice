@@ -71,41 +71,75 @@ export const DEFAULT_PRESET: Record<TempoMode, string> = {
   full: '24/8',
 }
 
-/** Shot types with golfer poses to animate; the others hold the setup pose. */
-export const ANIMATES_GOLFER: Record<TempoMode, boolean> = {
-  putting: false,
-  chipping: false,
-  full: true,
+/** How the swing dial's golfer flips through its poses for one shot type. Numbers index GOLFER_FRAMES[mode]. */
+export interface SwingAnimation {
+  /** poses spread evenly over the backswing, starting from setup */
+  back: number[]
+  /** poses spread evenly over the downswing; the first one lands on the top tone */
+  down: number[]
+  /** pose shown on the impact tone */
+  impact: number
+  /** poses after impact, each shown until `until` seconds after it; the golfer then resets to setup */
+  after: { until: number; frame: number }[]
 }
 
-// Indexes into GOLFER_FRAMES (components/tempo/golfer-frames.ts):
-// 0 setup, 1 takeaway, 2 hip-high, 3 halfway, 4 chest-high, 5 three-quarter, 6 head-high, 7 top,
-// 8 downswing, 9 approach, 10 impact, 11 release, 12 follow-through, 13 finish
-const BACK_FRAMES = [0, 1, 2, 3, 4, 5, 6]
-const DOWN_FRAMES = [7, 6, 5, 4, 3, 2, 8, 9]
-const IMPACT_FRAME = 10
-/** First pose in which the ball has been hit. */
-export const BALL_GONE_FRAME = 11
-// Seconds after impact at which each later pose ends
+// Seconds the impact pose is held before the follow-through starts
 const IMPACT_HOLD = 0.06
-const RELEASE_END = 0.14
-const FOLLOW_THROUGH_END = 0.3
-const FINISH_END = 1.1
+
+// Frame order comes from MODES in scripts/trace-golfer.py (see GOLFER_POSES in components/tempo/golfer-frames.ts)
+export const SWING_ANIMATION: Record<TempoMode, SwingAnimation> = {
+  // The putting golfer is a single pose; the putter itself swings (putterAngle)
+  putting: { back: [0], down: [0], impact: 0, after: [{ until: 0.6, frame: 0 }] },
+  // 0 setup, 1 early takeaway, 2 mid takeaway, 3 waist-high, 4 downswing, 5 approach, 6 impact, 7 follow-through
+  chipping: { back: [0, 1, 2], down: [3, 2, 4, 5], impact: 6, after: [{ until: 1.1, frame: 7 }] },
+  // 0 setup, 1 takeaway, 2 hip-high, 3 halfway, 4 chest-high, 5 three-quarter, 6 head-high, 7 top,
+  // 8 downswing, 9 approach, 10 impact, 11 release, 12 follow-through, 13 finish
+  full: {
+    back: [0, 1, 2, 3, 4, 5, 6],
+    down: [7, 6, 5, 4, 3, 2, 8, 9],
+    impact: 10,
+    after: [
+      { until: 0.14, frame: 11 },
+      { until: 0.3, frame: 12 },
+      { until: 1.1, frame: 13 },
+    ],
+  },
+}
 
 /**
  * Golfer pose for the swing dial. `swing` is the ring progress (0 → 0.5 backswing, 0.5 → 1 downswing),
- * `sinceImpact` the seconds since the impact tone (null before it). Top lands exactly on the top tone
- * and impact on the impact tone; the follow-through plays into the rest, then the golfer resets to setup.
+ * `sinceImpact` the seconds since the impact tone (null before it). The top pose lands exactly on the
+ * top tone and impact on the impact tone; the follow-through plays into the rest, then the golfer resets.
  */
-export function swingFrame(swing: number, sinceImpact: number | null): number {
-  if (swing > 0 && swing < 0.5) return BACK_FRAMES[Math.floor(swing * 2 * BACK_FRAMES.length)]
-  if (swing >= 0.5 && swing < 1) return DOWN_FRAMES[Math.floor((swing - 0.5) * 2 * DOWN_FRAMES.length)]
+export function swingFrame(anim: SwingAnimation, swing: number, sinceImpact: number | null): number {
+  if (swing > 0 && swing < 0.5) return anim.back[Math.floor(swing * 2 * anim.back.length)]
+  if (swing >= 0.5 && swing < 1) return anim.down[Math.floor((swing - 0.5) * 2 * anim.down.length)]
   if (sinceImpact === null) return 0
-  if (sinceImpact < IMPACT_HOLD) return IMPACT_FRAME
-  if (sinceImpact < RELEASE_END) return 11
-  if (sinceImpact < FOLLOW_THROUGH_END) return 12
-  if (sinceImpact < FINISH_END) return 13
-  return 0
+  if (sinceImpact < IMPACT_HOLD) return anim.impact
+  return anim.after.find(a => sinceImpact < a.until)?.frame ?? 0
+}
+
+/** True once the ball has been hit, until the golfer resets to setup. */
+export function ballGone(anim: SwingAnimation, sinceImpact: number | null): boolean {
+  return sinceImpact !== null && sinceImpact >= IMPACT_HOLD && sinceImpact < anim.after[anim.after.length - 1].until
+}
+
+const PUTTER_BACK = 10 // degrees the putter swings back
+const PUTTER_THROUGH = 14 // degrees it swings through past the ball
+const PUTTER_THROUGH_AT = 0.25 // seconds after impact to reach the end of the follow-through
+const PUTTER_HOLD_UNTIL = 0.45
+const PUTTER_RESET_AT = 0.6 // back at the ball; short enough for the fastest metronome beat
+
+/**
+ * Putter rotation about the hands, in degrees: positive swings the head back (viewer's left),
+ * negative through toward the target. `position` is 0 at address/impact and 1 at the top of the stroke.
+ */
+export function putterAngle(position: number, sinceImpact: number | null): number {
+  if (position > 0) return position * PUTTER_BACK
+  if (sinceImpact === null || sinceImpact >= PUTTER_RESET_AT) return 0
+  if (sinceImpact < PUTTER_THROUGH_AT) return -PUTTER_THROUGH * (sinceImpact / PUTTER_THROUGH_AT)
+  if (sinceImpact < PUTTER_HOLD_UNTIL) return -PUTTER_THROUGH
+  return -PUTTER_THROUGH * ((PUTTER_RESET_AT - sinceImpact) / (PUTTER_RESET_AT - PUTTER_HOLD_UNTIL))
 }
 
 export function framesToMs(frames: number): number {
