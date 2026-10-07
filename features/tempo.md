@@ -39,12 +39,16 @@ Defined in `lib/tempo.ts` (pure, unit-tested in `lib/__tests__/tempo.test.ts`).
         - Backswing: Setup → Takeaway → Hip-high → Halfway → Chest-high → Three-quarter → Head-high → **Top**
         - Downswing: back down through the same poses to Hip-high, then Downswing → Approach → **Impact**
         - After impact: Release (to 0.14 s), Follow-through (to 0.3 s), Finish (to 1.1 s), then Setup
-      - **Chipping** — 8 poses from `golfer-chipping.png`
-        - Backswing: Setup → Early takeaway → Mid takeaway → **Waist-high** (the top of a chip)
-        - Downswing: Mid takeaway → Downswing → Approach → **Impact**
-        - After impact: Follow-through held to 1.1 s, then Setup
-        - The sheet's shoulder-high "Top of Backswing", full Follow-Through and Finish poses are not used — they are bigger than a chip
-      - **Putting** — one traced Setup pose from `golfer-putting.png` with its putter erased; the dial draws the putter and swings it as a pendulum about the hands (`putterAngle()` in `lib/tempo.ts`): 10° back by the top tone, back to the ball on the impact tone, 14° through over 0.25 s, held, and back at the ball by 0.6 s. The body stays still. (The putting sheet's poses show no backstroke, so they are not used as frames.) Works the same in Metronome mode
+      - **Chipping** — all 11 poses from `golfer-chipping.png`
+        - Backswing: Setup → Early takeaway → Mid takeaway → Waist-high → **Top**
+        - Downswing: Waist-high → Mid takeaway → Downswing → Approach → **Impact**
+        - After impact: Early follow-through (to 0.14 s), Follow-through (to 0.35 s), Finish (to 1.1 s), then Setup
+      - **Putting** — the first 10 poses from `golfer-putting.png` (poses 11–16 are post-stroke stills and are not used)
+        - Backstroke: Setup → Pre-stroke → Takeaway → Mid takeaway → **Transition**
+        - Forward stroke: Early forward stroke → **Impact**
+        - After impact: Early follow-through (to 0.15 s), Mid follow-through (to 0.3 s), Finish (to 0.6 s), then Setup — short enough to finish inside the fastest metronome beat. Works the same in Metronome mode
+        - The sheet's first eight poses differ only slightly, so the backstroke is subtle; the follow-through is the visible part
+      - All three shot types share one scale and stand on the same spot in the ring, so the golfer does not jump when switching shot type
       - With Repeat off the rep ends ~0.25 s after impact, cutting the follow-through short
   - Start / Stop button
 - **Tempo card**

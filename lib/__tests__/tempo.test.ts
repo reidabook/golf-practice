@@ -5,7 +5,6 @@ import {
   SWING_ANIMATION,
   swingFrame,
   ballGone,
-  putterAngle,
   MODES,
   BPM_MIN,
   BPM_MAX,
@@ -82,17 +81,37 @@ describe('swingFrame — full swing', () => {
 describe('swingFrame — chipping', () => {
   const chip = SWING_ANIMATION.chipping
 
-  it('goes back to waist-high on the top tone and down to impact on the impact tone', () => {
+  it('goes back to the top pose on the top tone and down to impact on the impact tone', () => {
     expect(swingFrame(chip, 0.01, null)).toBe(0)
-    expect(swingFrame(chip, 0.49, null)).toBe(2)
-    expect(swingFrame(chip, 0.5, null)).toBe(3)
-    expect(swingFrame(chip, 0.99, null)).toBe(5)
-    expect(swingFrame(chip, 0, 0)).toBe(6)
+    expect(swingFrame(chip, 0.49, null)).toBe(3)
+    expect(swingFrame(chip, 0.5, null)).toBe(4)
+    expect(swingFrame(chip, 0.99, null)).toBe(6)
+    expect(swingFrame(chip, 0, 0)).toBe(7)
   })
 
-  it('holds the follow-through, then resets', () => {
-    expect(swingFrame(chip, 0, 0.5)).toBe(7)
+  it('follows through to the finish, then resets', () => {
+    expect(swingFrame(chip, 0, 0.1)).toBe(8)
+    expect(swingFrame(chip, 0, 0.2)).toBe(9)
+    expect(swingFrame(chip, 0, 0.6)).toBe(10)
     expect(swingFrame(chip, 0, 1.2)).toBe(0)
+  })
+})
+
+describe('swingFrame — putting', () => {
+  const putt = SWING_ANIMATION.putting
+
+  it('reaches transition on the top tone and impact on the impact tone', () => {
+    expect(swingFrame(putt, 0.49, null)).toBe(3)
+    expect(swingFrame(putt, 0.5, null)).toBe(4)
+    expect(swingFrame(putt, 0.99, null)).toBe(5)
+    expect(swingFrame(putt, 0, 0)).toBe(6)
+  })
+
+  it('follows through and is back at setup inside the fastest metronome beat', () => {
+    expect(swingFrame(putt, 0, 0.1)).toBe(7)
+    expect(swingFrame(putt, 0, 0.2)).toBe(8)
+    expect(swingFrame(putt, 0, 0.5)).toBe(9)
+    expect(swingFrame(putt, 0, 0.62)).toBe(0)
   })
 })
 
@@ -104,28 +123,6 @@ describe('ballGone', () => {
       expect(ballGone(anim, 0.3)).toBe(true)
       expect(ballGone(anim, 2)).toBe(false)
     }
-  })
-})
-
-describe('putting', () => {
-  it('golfer body stays in the setup pose', () => {
-    const putt = SWING_ANIMATION.putting
-    for (const s of [0.1, 0.5, 0.9]) expect(swingFrame(putt, s, null)).toBe(0)
-    expect(swingFrame(putt, 0, 0.2)).toBe(0)
-  })
-
-  it('putter swings back with the stroke and returns to the ball at impact', () => {
-    expect(putterAngle(0, null)).toBe(0)
-    expect(putterAngle(0.5, null)).toBeCloseTo(5)
-    expect(putterAngle(1, null)).toBeCloseTo(10)
-    expect(putterAngle(0, 0)).toBeCloseTo(0)
-  })
-
-  it('putter follows through past the ball, holds, then resets', () => {
-    expect(putterAngle(0, 0.125)).toBeCloseTo(-7)
-    expect(putterAngle(0, 0.3)).toBe(-14)
-    expect(putterAngle(0, 0.525)).toBeCloseTo(-7)
-    expect(putterAngle(0, 0.7)).toBe(0)
   })
 })
 

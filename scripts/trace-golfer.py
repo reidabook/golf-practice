@@ -5,7 +5,7 @@ Reads   scripts/assets/golfer-reference.png    full swing, 10 key poses
         scripts/assets/golfer-inbetweens.png   AI-generated variant of the full-swing sheet; some of its
                                                poses fall between the key poses and are used as in-betweens
         scripts/assets/golfer-chipping.png     chipping, 11 poses
-        scripts/assets/golfer-putting.png      putting, 16 poses (only the setup pose is used, see MODES)
+        scripts/assets/golfer-putting.png      putting, 16 poses (the first 10 are the stroke)
 Writes  components/tempo/golfer-frames.ts
 
 Usage: python3 scripts/trace-golfer.py [preview.html]
@@ -25,7 +25,7 @@ DARK = 110  # grey level below which a pixel is artwork
 SPECK = 40  # loose blobs smaller than this (px²) are dropped: ball outlines, ground-line fragments
 BOX = 200  # dial viewBox size
 RADIUS = 81  # poses must stay within this distance of the dial centre
-MAX_HEIGHT = 125  # cap on the setup pose's height in the dial, for shots whose club never reaches far
+ALIGN_SEARCH = 14  # px either way when sliding a pose over the setup pose (align='overlap')
 EPSILON = 1.0  # contour simplification, source pixels
 
 # Each sheet: file, row bands holding the figures (badges and captions sit below each band),
@@ -35,20 +35,20 @@ SHEETS = {
     # poses 9 and 10 of this sheet nearly touch
     'mid': dict(file='golfer-inbetweens.png', rows=[(24, 322), (438, 692)], gap=1, poses=10),
     'chip': dict(file='golfer-chipping.png', rows=[(40, 423), (556, 883)], gap=4, poses=11),
-    # erase: polygons (sheet pixels) blanked out before tracing, keyed by pose number — here the setup pose's putter
-    # shaft and head, which the dial draws itself so it can swing
-    'putt': dict(file='golfer-putting.png', rows=[(138, 394), (571, 815)], gap=4, poses=16, erase={
-        1: [[(84, 286), (96, 286), (123, 380), (111, 380)], [(104, 378), (126, 378), (126, 394), (104, 394)]],
-    }),
+    # thicken: fatten hairlines by this many pixels before tracing — the putter shaft is 1 px wide
+    # soft: grey level under which hairlines also count as artwork — parts of the shaft are drawn in light grey
+    'putt': dict(file='golfer-putting.png', rows=[(138, 394), (571, 815)], gap=4, poses=16, thicken=1, soft=200),
 }
 
-# Per shot type: the poses in frame order as (name, sheet, pose number on that sheet), the sheet whose
-# scale the others are matched to, and where the ball is. Balls drawn dark are found automatically
-# (ball=None); light ones are given as (sheet, pose number, x, y, radius) in that sheet's pixels.
+# Per shot type: the poses in frame order as (name, sheet, pose number on that sheet), and where the ball is.
+# Balls drawn dark are found automatically (ball=None); light ones are given as (sheet, pose number, x, y,
+# radius) in that sheet's pixels. align='overlap' resizes each pose to the setup pose's height and slides it
+# onto the setup pose instead of trusting the lead shoe — for shots where the body barely moves, so any
+# drift in the artwork shows as jitter.
+# All shot types share one scale and stand on the same spot in the dial.
 # Frame indexes here are what SWING_ANIMATION in lib/tempo.ts refers to.
 MODES = {
     'full': dict(
-        base='ref',
         ball=None,
         frames=[
             ('setup', 'ref', 1),
@@ -67,32 +67,41 @@ MODES = {
             ('finish', 'ref', 10),
         ],
     ),
-    # Sheet poses 5 (shoulder-high top), 10 and 11 (full follow-through and finish) are bigger than a chip
     'chipping': dict(
-        base='chip',
         ball=('chip', 2, 399, 414, 5.5),
         frames=[
             ('setup', 'chip', 1),
             ('earlyTakeaway', 'chip', 2),
             ('midTakeaway', 'chip', 3),
             ('waistHigh', 'chip', 4),
+            ('top', 'chip', 5),
             ('downswing', 'chip', 6),
             ('approach', 'chip', 7),
             ('impact', 'chip', 8),
-            ('followThrough', 'chip', 9),
+            ('earlyFollowThrough', 'chip', 9),
+            ('followThrough', 'chip', 10),
+            ('finish', 'chip', 11),
         ],
     ),
-    # The putting sheet has no backstroke (poses 1–8 are near-identical), so putting uses the setup pose
-    # alone, with its putter erased and redrawn by the dial as a pendulum. putter = (sheet, pose number,
-    # hands, club head) in sheet pixels.
+    # Sheet poses 11–16 are post-stroke stills (ball rolling, alignment check, …)
     'putting': dict(
-        base='putt',
         ball=('putt', 9, 111, 807, 4.5),
-        putter=('putt', 1, (91, 280), (115, 386)),
-        frames=[('setup', 'putt', 1)],
+        align='overlap',
+        frames=[
+            ('setup', 'putt', 1),
+            ('preStroke', 'putt', 2),
+            ('takeaway', 'putt', 3),
+            ('midTakeaway', 'putt', 4),
+            ('transition', 'putt', 5),
+            ('forwardStroke', 'putt', 6),
+            ('impact', 'putt', 7),
+            ('earlyFollowThrough', 'putt', 8),
+            ('midFollowThrough', 'putt', 9),
+            ('finish', 'putt', 10),
+        ],
     ),
 }
-# Manual per-frame nudge in base-sheet pixels (dx, dy), keyed by (mode, frame index), applied after foot alignment
+# Manual per-frame nudge in reference-sheet pixels (dx, dy), keyed by (mode, frame index), applied after foot alignment
 NUDGE = {}
 
 
@@ -124,16 +133,23 @@ def clean(cell):
     return cell, ball
 
 
-def trace_sheet(file, rows, gap, poses, erase=None):
-    """One dict per pose: contours and ball relative to the lead-foot anchor, the anchor itself, height."""
+def trace_sheet(file, rows, gap, poses, thicken=0, soft=None):
+    """One dict per pose: contours and ball relative to the lead-foot anchor, plus what alignment needs."""
     grey = cv2.cvtColor(cv2.imread(str(ASSETS / file)), cv2.COLOR_BGR2GRAY)
     mask = (grey < DARK).astype(np.uint8)
-    for polygons in (erase or {}).values():
-        for polygon in polygons:
-            cv2.fillPoly(mask, [np.array(polygon, dtype=np.int32)], 0)
+    if thicken:
+        # Only what a 3×3 opening would wipe out, so the body's white detail lines stay open
+        kernel = np.ones((3, 3), np.uint8)
+        thin = mask - cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = mask | cv2.dilate(thin, np.ones((2 * thicken + 1, 2 * thicken + 1), np.uint8))
     out = []
     for top, bot in rows:
         band = mask[top:bot]
+        if soft:
+            pale = (grey[top:bot] < soft).astype(np.uint8)
+            hair = pale - cv2.morphologyEx(pale, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+            hair[-14:] = 0  # leave out the pale ground line and ball outline
+            band = band | hair
         for left, right in split_columns(band, gap):
             cell = band[:, left:right].copy()
             if cell.sum() < 3000:
@@ -141,9 +157,9 @@ def trace_sheet(file, rows, gap, poses, erase=None):
             cell, ball = clean(cell)
             ys = np.where(cell.any(axis=1))[0]
             ground = ys.max()
+            feet = np.where(cell[ground - 12:ground + 1].any(axis=0))[0]
             # Lead (right-hand) shoe stays planted through the whole swing
-            lead = np.where(cell[ground - 12:ground + 1].any(axis=0))[0].max()
-            anchor = np.array([lead, ground], dtype=np.float64)
+            anchor = np.array([feet.max(), ground], dtype=np.float64)
             contours, _ = cv2.findContours(cell, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
             polys = []
             for c in contours:
@@ -157,62 +173,90 @@ def trace_sheet(file, rows, gap, poses, erase=None):
                 ball=None if ball is None else ball - anchor,
                 origin=anchor + (left, top),  # anchor in whole-sheet pixels
                 height=ground - ys.min(),
+                stance=(feet.min() + feet.max()) / 2 - anchor[0],  # middle of the feet, relative to the anchor
+                mask=cell,
+                anchor=anchor.astype(int),
             ))
     if len(out) != poses:
         sys.exit(f'{file}: expected {poses} poses, found {len(out)}')
     return out
 
 
+def overlap_shift(pose, setup):
+    """Shift (dx, dy) that best lays `pose` over `setup` when both are pinned at their anchors."""
+    size, pin, pad = 700, np.array([500, 600]), ALIGN_SEARCH
+
+    def canvas(p, margin):
+        img = np.zeros((size + 2 * margin, size + 2 * margin), np.float32)
+        h, w = p['mask'].shape
+        x, y = pin - p['anchor'] + margin
+        img[y:y + h, x:x + w] = p['mask']
+        return img
+
+    score = cv2.matchTemplate(canvas(setup, pad), canvas(pose, 0), cv2.TM_CCORR)
+    _, _, _, (x, y) = cv2.minMaxLoc(score)
+    return np.array([x - pad, y - pad], dtype=np.float64)
+
+
 def num(v):
     return f'{v:.1f}'.rstrip('0').rstrip('.')
 
 
-def build_mode(mode, spec, sheets):
-    """Returns (paths, ball dict, putter dict or None) for one shot type, in dial coordinates."""
-    base = sheets[spec['base']]
-    # Sheets differ in resolution: match each to the base sheet on the height of its setup pose
-    factor = {name: base[0]['height'] / sheet[0]['height'] for name, sheet in sheets.items()}
+def build_mode(mode, spec, sheets, factor):
+    """Returns (frames, ball centre, ball radius) for one shot type, in reference-sheet pixels
+    relative to the middle of the setup pose's feet."""
+    setup = sheets[spec['frames'][0][1]][spec['frames'][0][2] - 1]
+    stand = np.array([setup['stance'], 0.0])
 
     frames = []
     for i, (_, sheet, number) in enumerate(spec['frames']):
-        nudge = np.array(NUDGE.get((mode, i), (0, 0)), dtype=np.float64)
-        frames.append([p * factor[sheet] + nudge for p in sheets[sheet][number - 1]['polys']])
+        pose = sheets[sheet][number - 1]
+        shift = np.array(NUDGE.get((mode, i), (0, 0)), dtype=np.float64) / factor[sheet]
+        k = 1.0
+        if spec.get('align') == 'overlap':
+            k = setup['height'] / pose['height']
+            resized = dict(
+                mask=cv2.resize(pose['mask'], None, fx=k, fy=k, interpolation=cv2.INTER_NEAREST),
+                anchor=np.round(pose['anchor'] * k).astype(int),
+            )
+            shift += overlap_shift(resized, setup)
+        frames.append([(p * k + shift - stand) * factor[sheet] for p in pose['polys']])
 
     if spec['ball']:
         sheet, number, x, y, r = spec['ball']
-        ball = (np.array([x, y]) - sheets[sheet][number - 1]['origin']) * factor[sheet]
+        ball = (np.array([x, y]) - sheets[sheet][number - 1]['origin'] - stand) * factor[sheet]
         ball_r = r * factor[sheet]
     else:
-        ball = np.mean([sheets[s][n - 1]['ball'] * factor[s] for _, s, n in spec['frames']
+        ball = np.mean([(sheets[s][n - 1]['ball'] - stand) * factor[s] for _, s, n in spec['frames']
                         if sheets[s][n - 1]['ball'] is not None], axis=0)
         ball_r = 6
-
-    # One shared scale and offset so every pose of this shot fits inside the ring
-    pts = np.vstack([p for polys in frames for p in polys]).astype(np.float32)
-    (cx, cy), r = cv2.minEnclosingCircle(pts)
-    scale = min(RADIUS / r, MAX_HEIGHT / base[0]['height'])
-
-    def place(p):
-        return (np.asarray(p) - (cx, cy)) * scale + BOX / 2
-
-    paths = [
-        ''.join('M' + 'L'.join(f'{num(x)} {num(y)}' for x, y in place(p)) + 'Z' for p in polys)
-        for polys in frames
-    ]
-    bx, by = place(ball)
-    print(f'  {mode}: {len(paths)} poses, {sum(map(len, paths)) // 1024} KB, scale {scale:.3f}')
-    putter = None
-    if spec.get('putter'):
-        sheet, number, hands, head = spec['putter']
-        origin = sheets[sheet][number - 1]['origin']
-        (hx, hy), (cx2, cy2) = (place((np.array(p) - origin) * factor[sheet]) for p in (hands, head))
-        putter = dict(x1=num(hx), y1=num(hy), x2=num(cx2), y2=num(cy2))
-    return paths, dict(cx=num(bx), cy=num(by), r=num(ball_r * scale)), putter
+    return frames, ball, ball_r
 
 
 def main():
     sheets = {name: trace_sheet(**spec) for name, spec in SHEETS.items()}
-    built = {mode: build_mode(mode, spec, sheets) for mode, spec in MODES.items()}
+    # Sheets differ in resolution: match each to the reference sheet on the height of its setup pose
+    factor = {name: sheets['ref'][0]['height'] / sheet[0]['height'] for name, sheet in sheets.items()}
+    modes = {mode: build_mode(mode, spec, sheets, factor) for mode, spec in MODES.items()}
+
+    # One scale and offset for every shot type, so the golfer is the same size and stands in the same place
+    pts = np.vstack([p for frames, _, _ in modes.values() for polys in frames for p in polys]).astype(np.float32)
+    (cx, cy), r = cv2.minEnclosingCircle(pts)
+    scale = RADIUS / r
+
+    def place(p):
+        return (np.asarray(p) - (cx, cy)) * scale + BOX / 2
+
+    built = {}
+    for mode, (frames, ball, ball_r) in modes.items():
+        paths = [
+            ''.join('M' + 'L'.join(f'{num(x)} {num(y)}' for x, y in place(p)) + 'Z' for p in polys)
+            for polys in frames
+        ]
+        bx, by = place(ball)
+        built[mode] = (paths, dict(cx=num(bx), cy=num(by), r=num(ball_r * scale)))
+        print(f'  {mode}: {len(paths)} poses, {sum(map(len, paths)) // 1024} KB')
+    print(f'  scale {scale:.3f}')
 
     lines = [
         '// GENERATED by scripts/trace-golfer.py from the pose sheets in scripts/assets — do not edit by hand.',
@@ -226,15 +270,12 @@ def main():
         '} as const',
         '',
         'export const GOLFER_BALL: Record<TempoMode, { cx: number; cy: number; r: number }> = {',
-        *[f"  {mode}: {{ cx: {b['cx']}, cy: {b['cy']}, r: {b['r']} }}," for mode, (_, b, _) in built.items()],
+        *[f"  {mode}: {{ cx: {b['cx']}, cy: {b['cy']}, r: {b['r']} }}," for mode, (_, b) in built.items()],
         '}',
-        '',
-        '// Putter for the putting pose, hands (x1, y1) to club head (x2, y2); the dial rotates it about the hands',
-        *[f"export const GOLFER_PUTTER = {{ x1: {p['x1']}, y1: {p['y1']}, x2: {p['x2']}, y2: {p['y2']} }}" for _, _, p in built.values() if p],
         '',
         'export const GOLFER_FRAMES: Record<TempoMode, string[]> = {',
     ]
-    for mode, (paths, _, _) in built.items():
+    for mode, (paths, _) in built.items():
         lines += [f'  {mode}: [', *[f"    '{d}'," for d in paths], '  ],']
     lines += ['}', '']
     OUT.write_text('\n'.join(lines))
@@ -243,13 +284,9 @@ def main():
     if len(sys.argv) > 1:
         ring = '<circle cx="100" cy="100" r="88" fill="none" stroke="#333" stroke-width="8"/>'
         html = ''
-        for mode, (paths, b, putter) in built.items():
+        for mode, (paths, b) in built.items():
             ball = f'<circle cx="{b["cx"]}" cy="{b["cy"]}" r="{b["r"]}" fill="#fff"/>'
-            club = ''.join(
-                f'<line x1="{putter["x1"]}" y1="{putter["y1"]}" x2="{putter["x2"]}" y2="{putter["y2"]}" stroke="#fff" '
-                f'stroke-width="1.4" transform="rotate({a} {putter["x1"]} {putter["y1"]})"/>' for a in (10, 0, -14)
-            ) if putter else ''
-            cells = [f'{ring}{ball}{club}<path d="{d}" fill="#fff" fill-rule="evenodd"/>' for d in paths]
+            cells = [f'{ring}{ball}<path d="{d}" fill="#fff" fill-rule="evenodd"/>' for d in paths]
             cells.append(ring + ''.join(f'<path d="{d}" fill="#fff" fill-opacity=".18" fill-rule="evenodd"/>' for d in paths))
             html += '<div style="display:flex;flex-wrap:wrap">' + ''.join(
                 f'<svg viewBox="0 0 200 200" width="200" height="200">{c}</svg>' for c in cells) + '</div>'
