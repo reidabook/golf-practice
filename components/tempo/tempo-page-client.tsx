@@ -14,7 +14,6 @@ import {
   GAP_OPTIONS,
   MODES,
   PRESETS,
-  ANIMATES_GOLFER,
   clampBpm,
   framesToMs,
   getPreset,
@@ -208,7 +207,7 @@ export function TempoPageClient() {
           </p>
         </div>
 
-        <SwingDial engineRef={engineRef} playing={playing} animate={ANIMATES_GOLFER[mode]} showCountdown={!metronome} />
+        <SwingDial engineRef={engineRef} playing={playing} mode={mode} showCountdown={!metronome} />
 
         <button
           onClick={playing ? stop : start}
