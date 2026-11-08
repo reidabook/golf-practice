@@ -81,6 +81,10 @@
 - **"Save Score"** — logs the score, then shows comparison overlay; if block becomes complete, shows block completion screen after overlay is dismissed
 - **"Skip Drill"** — marks drill as skipped for today, returns to drill list
 
+### Resume after app is killed
+- Unsaved score is kept as a draft in localStorage and restored when the drill reopens (cleared on save/skip, or if already scored today)
+- If iOS kills the app on this screen or the drill list, relaunching within 3 hours reopens it (`DrillRouteWatcher`, see `features/shared.md` → App relaunch)
+
 ### Score Comparison Overlay (shown after Save)
 - Trend indicator with label: ↑ Improved / ↓ Declined / → Same / ★ First Entry
 - Current score in large font + unit

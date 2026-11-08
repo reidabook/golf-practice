@@ -22,6 +22,20 @@ export const dynamic = 'force-dynamic'
 Without this, Next.js attempts to prerender the page at build time and the sheet connection fails.
 Dynamic route pages (`[blockId]`, `[drillId]`) are exempt.
 
+### Client router cache & prefetch
+
+`next.config.ts` sets `experimental.staleTimes` (`dynamic: 60`, `static: 300`) so visited pages stay in the client router cache and tab switches are instant. Bottom nav links use `prefetch` (full prefetch) so every tab's data is loaded in the background. Server actions call `revalidatePath`, which clears this cache after any write.
+
+### Home-screen app (PWA)
+
+- `public/sw.js` (registered by `components/sw-register.tsx`):
+  - `/_next/static`, icons, manifest → cache-first
+  - Full page loads (app launch/reload) → stale-while-revalidate: cached page shows instantly, cache refreshes in the background
+  - API routes, in-app RSC navigations and POSTs → network only (not intercepted)
+  - Bump `CACHE_NAME` when changing caching behaviour
+- `SwRegister` calls `router.refresh()` on launch when a service worker controls the page, so a cached page catches up with fresh data.
+- `components/scoring/drill-route-watcher.tsx` restores the open drill after iOS kills the app (see `features/shared.md` → App relaunch).
+
 ---
 
 ## Data Layer
@@ -211,6 +225,8 @@ Per-drill flag (`higher_better` / `lower_better`). Used for trend color, persona
 | Component | Used by |
 |---|---|
 | `components/nav/bottom-nav.tsx` | `app/layout.tsx` |
+| `components/sw-register.tsx` | `app/layout.tsx` |
+| `components/scoring/drill-route-watcher.tsx` | `app/layout.tsx` |
 | `components/scoring/score-input.tsx` | `components/scoring/scoring-client.tsx` |
 | `components/scoring/numpad.tsx` | `components/scoring/score-input.tsx` |
 | `components/scoring/comparison-overlay.tsx` | `components/scoring/scoring-client.tsx` |

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golf-practice-v1'
+const CACHE_NAME = 'golf-practice-v2'
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -24,9 +24,14 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Network-first for API routes and server actions
-  if (url.pathname.startsWith('/api/') || request.method === 'POST') {
-    event.respondWith(fetch(request))
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return
+
+  // API routes and in-app (RSC) navigations always go to the network
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.searchParams.has('_rsc') ||
+    request.headers.get('RSC') === '1'
+  ) {
     return
   }
 
@@ -37,19 +42,34 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/manifest.json'
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => cached ?? fetch(request))
+      caches.match(request).then((cached) => {
+        if (cached) return cached
+        return fetch(request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
+          }
+          return response
+        })
+      })
     )
     return
   }
 
-  // Network-first for pages
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
+  // Full page loads (app launch / reload): stale-while-revalidate.
+  // Serve the cached page instantly, refresh the cache in the background.
+  // The app calls router.refresh() on launch so data is brought up to date.
+  if (request.mode === 'navigate') {
+    const network = fetch(request).then((response) => {
+      if (response.ok) {
         const clone = response.clone()
         caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
-        return response
-      })
-      .catch(() => caches.match(request))
-  )
+      }
+      return response
+    })
+    event.waitUntil(network.catch(() => {}))
+    event.respondWith(
+      caches.match(request).then((cached) => cached ?? network)
+    )
+  }
 })

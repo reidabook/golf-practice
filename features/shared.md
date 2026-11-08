@@ -11,6 +11,12 @@
 - Sticky, safe-area aware (notch devices)
 - Breadcrumb navigation on nested screens (e.g., History > Block Name)
 - Back buttons on all nested screens
+- Tab switches are instant: visited tabs are kept in the client router cache for 60s and nav links prefetch every tab's data; any save clears the cache
+
+### App relaunch (home-screen app)
+- App opens instantly from the service worker's cached page, then refreshes data in the background (`router.refresh()` on launch)
+- If iOS kills the app while a drill list or drill scorer is open (e.g. screen locked), relaunching within 3 hours returns to that same screen; the unsaved score on the drill scorer is restored from its draft
+- Navigating away from a drill screen on purpose clears the saved route — no restore
 
 ---
 

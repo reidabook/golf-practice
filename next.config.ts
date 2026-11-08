@@ -1,7 +1,11 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  experimental: {},
+  experimental: {
+    // Keep visited/prefetched pages in the client router cache so tab switches
+    // are instant. Server actions call revalidatePath, which clears this cache.
+    staleTimes: { dynamic: 60, static: 300 },
+  },
 }
 
 export default nextConfig
