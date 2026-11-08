@@ -2,10 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   PRESETS,
   DEFAULT_PRESET,
-  SWING_ANIMATION,
-  swingFrame,
   spriteFrame,
-  ballGone,
   MODES,
   BPM_MIN,
   BPM_MAX,
@@ -17,6 +14,7 @@ import {
   beatSeconds,
   metronomeSeconds,
 } from '../tempo'
+import { SWING_SPRITES } from '../../components/tempo/swing-sprites'
 
 describe('framesToMs', () => {
   it('converts 30fps frames to milliseconds', () => {
@@ -50,98 +48,51 @@ describe('PRESETS', () => {
   })
 })
 
-describe('swingFrame — full swing', () => {
-  const full = SWING_ANIMATION.full
-
-  it('steps through the seven backswing poses in order, reaching top on the top tone', () => {
-    const seen = []
-    for (let i = 0; i < 7; i++) seen.push(swingFrame(full, (i + 0.5) / 14, null))
-    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6])
-    expect(swingFrame(full, 0.5, null)).toBe(7)
-  })
-
-  it('comes back down the same path, then into downswing and approach', () => {
-    const seen = []
-    for (let i = 0; i < 8; i++) seen.push(swingFrame(full, 0.5 + (i + 0.5) / 16, null))
-    expect(seen).toEqual([7, 6, 5, 4, 3, 2, 8, 9])
-  })
-
-  it('shows impact on the impact tone, then release, follow-through, finish and back to setup', () => {
-    expect(swingFrame(full, 0, 0)).toBe(10)
-    expect(swingFrame(full, 0, 0.1)).toBe(11)
-    expect(swingFrame(full, 0, 0.2)).toBe(12)
-    expect(swingFrame(full, 0, 0.6)).toBe(13)
-    expect(swingFrame(full, 0, 1.5)).toBe(0)
-  })
-
-  it('holds setup before the first rep', () => {
-    expect(swingFrame(full, 0, null)).toBe(0)
-  })
-})
-
-describe('spriteFrame — chipping', () => {
-  const seg = { back: 48, down: 24, through: 30 }
+describe('spriteFrame', () => {
+  const chip = { segments: { back: 48, down: 24, through: 30 }, throughSeconds: 0.5, resetAt: 1.1 }
 
   it('starts from setup and reaches the top frame on the top tone', () => {
-    expect(spriteFrame(seg, 0, null)).toBe(0)
-    expect(spriteFrame(seg, 0.01, null)).toBe(1)
-    expect(spriteFrame(seg, 0.4999, null)).toBe(47)
-    expect(spriteFrame(seg, 0.5, null)).toBe(48)
+    expect(spriteFrame(chip, 0, null)).toBe(0)
+    expect(spriteFrame(chip, 0.01, null)).toBe(1)
+    expect(spriteFrame(chip, 0.4999, null)).toBe(47)
+    expect(spriteFrame(chip, 0.5, null)).toBe(48)
   })
 
   it('reaches the impact frame by the impact tone and plays the follow-through from there', () => {
-    expect(spriteFrame(seg, 0.9999, null)).toBe(71)
-    expect(spriteFrame(seg, 0, 0)).toBe(72)
-    expect(spriteFrame(seg, 0, 0.25)).toBe(87)
-    expect(spriteFrame(seg, 0, 0.5)).toBe(101)
+    expect(spriteFrame(chip, 0.9999, null)).toBe(71)
+    expect(spriteFrame(chip, 0, 0)).toBe(72)
+    expect(spriteFrame(chip, 0, 0.25)).toBe(87)
+    expect(spriteFrame(chip, 0, 0.5)).toBe(101)
   })
 
   it('holds the finish, then resets to setup', () => {
-    expect(spriteFrame(seg, 0, 1)).toBe(101)
-    expect(spriteFrame(seg, 0, 1.2)).toBe(0)
+    expect(spriteFrame(chip, 0, 1)).toBe(101)
+    expect(spriteFrame(chip, 0, 1.2)).toBe(0)
   })
 
   it('frames only ever move forward through a stroke', () => {
     let prev = 0
     for (let s = 0.001; s < 1; s += 0.001) {
-      const f = spriteFrame(seg, s, null)
+      const f = spriteFrame(chip, s, null)
       expect(f).toBeGreaterThanOrEqual(prev)
       prev = f
     }
     for (let t = 0; t < 1.1; t += 0.01) {
-      const f = spriteFrame(seg, 0, t)
+      const f = spriteFrame(chip, 0, t)
       expect(f).toBeGreaterThanOrEqual(prev)
       prev = f
     }
   })
-})
 
-describe('swingFrame — putting', () => {
-  const putt = SWING_ANIMATION.putting
-
-  it('reaches transition on the top tone and impact on the impact tone', () => {
-    expect(swingFrame(putt, 0.49, null)).toBe(3)
-    expect(swingFrame(putt, 0.5, null)).toBe(4)
-    expect(swingFrame(putt, 0.99, null)).toBe(5)
-    expect(swingFrame(putt, 0, 0)).toBe(6)
+  it('uses each shot type’s own follow-through timing', () => {
+    const putt = { segments: { back: 36, down: 18, through: 24 }, throughSeconds: 0.35, resetAt: 0.6 }
+    expect(spriteFrame(putt, 0, 0.35)).toBe(77)
+    expect(spriteFrame(putt, 0, 0.59)).toBe(77)
+    expect(spriteFrame(putt, 0, 0.6)).toBe(0)
   })
 
-  it('follows through and is back at setup inside the fastest metronome beat', () => {
-    expect(swingFrame(putt, 0, 0.1)).toBe(7)
-    expect(swingFrame(putt, 0, 0.2)).toBe(8)
-    expect(swingFrame(putt, 0, 0.5)).toBe(9)
-    expect(swingFrame(putt, 0, 0.62)).toBe(0)
-  })
-})
-
-describe('ballGone', () => {
-  it('ball is there through impact, gone during the follow-through, back on reset', () => {
-    for (const anim of Object.values(SWING_ANIMATION)) {
-      expect(ballGone(anim, null)).toBe(false)
-      expect(ballGone(anim, 0)).toBe(false)
-      expect(ballGone(anim, 0.3)).toBe(true)
-      expect(ballGone(anim, 2)).toBe(false)
-    }
+  it('putting is back at setup inside the fastest metronome beat', () => {
+    expect(SWING_SPRITES.putting.resetAt).toBeLessThan(60 / BPM_MAX)
   })
 })
 

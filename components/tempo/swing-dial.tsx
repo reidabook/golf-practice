@@ -2,21 +2,16 @@
 
 import { useEffect, useRef, type RefObject } from 'react'
 import type { TempoEngine } from '@/lib/tempo-audio'
-import { SWING_ANIMATION, ballGone, spriteFrame, swingFrame, type TempoMode, type TracedMode } from '@/lib/tempo'
-import { GOLFER_BALL, GOLFER_FRAMES } from '@/components/tempo/golfer-frames'
-import { SWING_SPRITES, type SwingSprite } from '@/components/tempo/swing-sprites'
+import { spriteFrame, type TempoMode } from '@/lib/tempo'
+import { SWING_SPRITES } from '@/components/tempo/swing-sprites'
 
 type Phase = 'idle' | 'swing' | 'impact' | 'rest'
-
-// Chipping plays video frames from a sprite sheet; the other shot types flip through traced SVG poses
-function spriteFor(mode: TempoMode): SwingSprite | null {
-  return mode === 'chipping' ? SWING_SPRITES.chipping : null
-}
 
 /**
  * Circular swing visual. The ring is laid out like the swing: start and impact at
  * 6 o'clock, top at 12. It fills up the left side on the backswing, down the right
- * side on the downswing, then unwinds to empty over the rest.
+ * side on the downswing, then unwinds to empty over the rest. The golfer in the middle
+ * is video frames from a sprite sheet, drawn on a canvas in step with the same clock.
  */
 export function SwingDial({
   engineRef,
@@ -30,21 +25,19 @@ export function SwingDial({
   showCountdown: boolean
 }) {
   const ringRef = useRef<SVGCircleElement>(null)
-  const golferRef = useRef<SVGGElement>(null)
-  const ballRef = useRef<SVGCircleElement>(null)
   const labelRef = useRef<HTMLParagraphElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sheetRef = useRef<HTMLImageElement | null>(null)
-  const spriteAtRef = useRef(0) // sprite frame the clock wants
+  const wantedRef = useRef(0) // sprite frame the clock wants
   const paintedRef = useRef(-1) // sprite frame currently on the canvas
-  const sprite = spriteFor(mode)
+  const sprite = SWING_SPRITES[mode]
 
   // Draw one sprite frame, tinted with the theme's foreground colour
-  const paintSprite = (frame: number) => {
-    spriteAtRef.current = frame
+  const paint = (frame: number) => {
+    wantedRef.current = frame
     const canvas = canvasRef.current
     const sheet = sheetRef.current
-    if (!sprite || !canvas || !sheet?.complete || paintedRef.current === frame) return
+    if (!canvas || !sheet?.complete || paintedRef.current === frame) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     const k = canvas.width / 200
@@ -58,19 +51,18 @@ export function SwingDial({
     paintedRef.current = frame
   }
 
-  // Size the canvas for the screen and load the sprite sheet when a sprite shot type is picked
+  // Size the canvas for the screen and load the shot type's sprite sheet
   useEffect(() => {
     paintedRef.current = -1
-    if (!sprite) return
     const canvas = canvasRef.current
     if (canvas) {
-      const px = Math.round(canvas.clientWidth * (window.devicePixelRatio || 1))
-      canvas.width = canvas.height = px
+      canvas.width = canvas.height = Math.round(canvas.clientWidth * (window.devicePixelRatio || 1))
+      canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
     }
     const sheet = new Image()
     sheet.onload = () => {
       paintedRef.current = -1
-      paintSprite(spriteAtRef.current)
+      paint(wantedRef.current)
     }
     sheet.src = sprite.src
     sheetRef.current = sheet
@@ -83,7 +75,6 @@ export function SwingDial({
 
   // Drive the ring, golfer and countdown from the audio clock
   useEffect(() => {
-    const anim = sprite ? null : SWING_ANIMATION[mode as TracedMode]
     const draw = (
       phase: Phase,
       progress: number,
@@ -97,18 +88,7 @@ export function SwingDial({
         ring.style.strokeDashoffset = String(1 - progress)
         ring.style.opacity = progress > 0 ? '1' : '0'
       }
-      if (sprite) {
-        paintSprite(spriteFrame(sprite.segments, swing, sinceImpact))
-      } else if (anim) {
-        const frame = swingFrame(anim, swing, sinceImpact)
-        const poses = golferRef.current?.children
-        if (poses) {
-          for (let i = 0; i < poses.length; i++) {
-            ;(poses[i] as SVGPathElement).style.display = i === frame ? '' : 'none'
-          }
-        }
-        if (ballRef.current) ballRef.current.style.display = ballGone(anim, sinceImpact) ? 'none' : ''
-      }
+      paint(spriteFrame(sprite, swing, sinceImpact))
       if (labelRef.current) {
         labelRef.current.textContent = restLeft > 0 ? `Next rep in ${restLeft.toFixed(1)}s` : ''
       }
@@ -130,7 +110,7 @@ export function SwingDial({
     raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, mode, engineRef])
+  }, [playing, sprite, engineRef])
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -157,27 +137,9 @@ export function SwingDial({
           {/* Top and Start · Impact ticks */}
           <line x1="100" y1="4" x2="100" y2="20" strokeWidth="2" className="stroke-muted-foreground" />
           <line x1="100" y1="180" x2="100" y2="196" strokeWidth="2" className="stroke-muted-foreground" />
-
-          {/* Golfer silhouette, face-on: one traced path per pose, only the current one shown */}
-          {!sprite && (
-            <>
-              <g key={mode} ref={golferRef} fillRule="evenodd" className="fill-foreground">
-                {GOLFER_FRAMES[mode as TracedMode].map((d, i) => (
-                  <path key={i} d={d} style={i === 0 ? undefined : { display: 'none' }} />
-                ))}
-              </g>
-              <circle
-                ref={ballRef}
-                cx={GOLFER_BALL[mode as TracedMode].cx}
-                cy={GOLFER_BALL[mode as TracedMode].cy}
-                r={GOLFER_BALL[mode as TracedMode].r}
-                className="fill-foreground"
-              />
-            </>
-          )}
         </svg>
-        {/* Sprite golfer (video frames, ball included), drawn over the dial in the same 200×200 space */}
-        {sprite && <canvas key={mode} ref={canvasRef} aria-hidden className="absolute inset-0 w-full h-full text-foreground" />}
+        {/* Golfer (video frames, ball included), drawn over the dial in the same 200×200 space */}
+        <canvas ref={canvasRef} aria-hidden className="absolute inset-0 w-full h-full text-foreground" />
       </div>
       <span className="text-xs text-muted-foreground">Start · Impact</span>
       {showCountdown && (
