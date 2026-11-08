@@ -2,6 +2,8 @@
 // "24/8" = 24 frames takeaway → top, 8 frames top → impact.
 
 export type TempoMode = 'putting' | 'chipping' | 'full'
+/** Shot types whose golfer is a flipbook of traced poses; chipping plays video frames instead (SWING_SPRITES). */
+export type TracedMode = Exclude<TempoMode, 'chipping'>
 export type PuttStyle = 'tones' | 'metronome'
 
 export interface TempoPreset {
@@ -87,7 +89,7 @@ export interface SwingAnimation {
 const IMPACT_HOLD = 0.06
 
 // Frame order comes from MODES in scripts/trace-golfer.py (see GOLFER_POSES in components/tempo/golfer-frames.ts)
-export const SWING_ANIMATION: Record<TempoMode, SwingAnimation> = {
+export const SWING_ANIMATION: Record<TracedMode, SwingAnimation> = {
   // 0 setup, 1 pre-stroke, 2 takeaway, 3 mid takeaway, 4 transition, 5 forward stroke, 6 impact,
   // 7 early follow-through, 8 mid follow-through, 9 finish. Resets by 0.6 s to fit the fastest metronome beat.
   putting: {
@@ -98,18 +100,6 @@ export const SWING_ANIMATION: Record<TempoMode, SwingAnimation> = {
       { until: 0.15, frame: 7 },
       { until: 0.3, frame: 8 },
       { until: 0.6, frame: 9 },
-    ],
-  },
-  // 0 setup, 1 early takeaway, 2 mid takeaway, 3 waist-high, 4 top, 5 downswing, 6 approach, 7 impact,
-  // 8 early follow-through, 9 follow-through, 10 finish
-  chipping: {
-    back: [0, 1, 2, 3],
-    down: [4, 3, 2, 5, 6],
-    impact: 7,
-    after: [
-      { until: 0.14, frame: 8 },
-      { until: 0.35, frame: 9 },
-      { until: 1.1, frame: 10 },
     ],
   },
   // 0 setup, 1 takeaway, 2 hip-high, 3 halfway, 4 chest-high, 5 three-quarter, 6 head-high, 7 top,
@@ -142,6 +132,34 @@ export function swingFrame(anim: SwingAnimation, swing: number, sinceImpact: num
 /** True once the ball has been hit, until the golfer resets to setup. */
 export function ballGone(anim: SwingAnimation, sinceImpact: number | null): boolean {
   return sinceImpact !== null && sinceImpact >= IMPACT_HOLD && sinceImpact < anim.after[anim.after.length - 1].until
+}
+
+/** Frames per phase in a video sprite sheet, stored in this order: backswing, downswing, follow-through. */
+export interface SpriteSegments {
+  /** setup → top; the first frame is the setup pose */
+  back: number
+  /** top → impact */
+  down: number
+  /** impact → finish */
+  through: number
+}
+
+// The sprite's frames are sampled at equal steps of motion, so playing them evenly in time keeps the club moving steadily
+const SPRITE_THROUGH = 0.5 // seconds the follow-through takes after the impact tone
+const SPRITE_RESET_AT = 1.1 // finish is held until this long after impact, then back to setup
+
+/**
+ * Sprite frame for the swing dial, from the same clock values as swingFrame(): top lands on the top tone,
+ * impact on the impact tone, the follow-through plays into the rest, then the golfer resets to setup.
+ */
+export function spriteFrame(seg: SpriteSegments, swing: number, sinceImpact: number | null): number {
+  const step = (count: number, p: number) => Math.round(Math.min(1, Math.max(0, p)) * (count - 1))
+  if (swing > 0 && swing < 0.5) return step(seg.back, swing * 2)
+  if (swing >= 0.5 && swing < 1) return seg.back + step(seg.down, (swing - 0.5) * 2)
+  if (sinceImpact === null || sinceImpact >= SPRITE_RESET_AT) return 0
+  const through = seg.back + seg.down
+  if (sinceImpact < SPRITE_THROUGH) return through + step(seg.through, sinceImpact / SPRITE_THROUGH)
+  return through + seg.through - 1
 }
 
 export function framesToMs(frames: number): number {

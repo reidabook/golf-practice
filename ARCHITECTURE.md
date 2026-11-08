@@ -211,8 +211,9 @@ Recharts is client-side only. Pattern:
 No data layer. Settings live in `localStorage` (`tempo-settings`).
 - `lib/tempo.ts` — presets (30fps frame counts), ratios, BPM helpers; pure and unit-tested
 - `lib/tempo-audio.ts` — `TempoEngine`: Web Audio beeps scheduled on the audio clock; also reports swing position and rest remaining for the visual
-- `components/tempo/swing-dial.tsx` — circular ring + golfer silhouette SVG (pose per shot type chosen by `SWING_ANIMATION` / `swingFrame` in `lib/tempo.ts`), animated from the engine via `requestAnimationFrame`
-- `components/tempo/golfer-frames.ts` — GENERATED golfer pose paths; regenerate with `python3 scripts/trace-golfer.py` (needs `opencv-python`, `numpy`) from the pose sheets in `scripts/assets/` (full swing, chipping, putting)
+- `components/tempo/swing-dial.tsx` — circular ring + golfer, animated from the engine via `requestAnimationFrame`. Full swing and putting: traced SVG poses (`SWING_ANIMATION` / `swingFrame` in `lib/tempo.ts`). Chipping: sprite-sheet frames drawn on a `<canvas>` over the ring (`spriteFrame` in `lib/tempo.ts`)
+- `components/tempo/golfer-frames.ts` — GENERATED golfer pose paths; regenerate with `python3 scripts/trace-golfer.py` (needs `opencv-python`, `numpy`) from the pose sheets in `scripts/assets/` (full swing, putting)
+- `components/tempo/swing-sprites.ts` + `public/tempo/chipping.webp` — GENERATED chipping sprite (video frames) and its layout; regenerate with `python3 scripts/build-swing-sprite.py` (needs `ffmpeg`, `opencv-python`, `numpy`) from the clips in `scripts/assets/chipping/`
 - `components/tempo/tempo-page-client.tsx` — UI, wake lock, settings persistence
 
 ### "Scoring direction"

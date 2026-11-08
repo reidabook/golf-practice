@@ -4,6 +4,7 @@ import {
   DEFAULT_PRESET,
   SWING_ANIMATION,
   swingFrame,
+  spriteFrame,
   ballGone,
   MODES,
   BPM_MIN,
@@ -78,22 +79,40 @@ describe('swingFrame — full swing', () => {
   })
 })
 
-describe('swingFrame — chipping', () => {
-  const chip = SWING_ANIMATION.chipping
+describe('spriteFrame — chipping', () => {
+  const seg = { back: 48, down: 24, through: 30 }
 
-  it('goes back to the top pose on the top tone and down to impact on the impact tone', () => {
-    expect(swingFrame(chip, 0.01, null)).toBe(0)
-    expect(swingFrame(chip, 0.49, null)).toBe(3)
-    expect(swingFrame(chip, 0.5, null)).toBe(4)
-    expect(swingFrame(chip, 0.99, null)).toBe(6)
-    expect(swingFrame(chip, 0, 0)).toBe(7)
+  it('starts from setup and reaches the top frame on the top tone', () => {
+    expect(spriteFrame(seg, 0, null)).toBe(0)
+    expect(spriteFrame(seg, 0.01, null)).toBe(1)
+    expect(spriteFrame(seg, 0.4999, null)).toBe(47)
+    expect(spriteFrame(seg, 0.5, null)).toBe(48)
   })
 
-  it('follows through to the finish, then resets', () => {
-    expect(swingFrame(chip, 0, 0.1)).toBe(8)
-    expect(swingFrame(chip, 0, 0.2)).toBe(9)
-    expect(swingFrame(chip, 0, 0.6)).toBe(10)
-    expect(swingFrame(chip, 0, 1.2)).toBe(0)
+  it('reaches the impact frame by the impact tone and plays the follow-through from there', () => {
+    expect(spriteFrame(seg, 0.9999, null)).toBe(71)
+    expect(spriteFrame(seg, 0, 0)).toBe(72)
+    expect(spriteFrame(seg, 0, 0.25)).toBe(87)
+    expect(spriteFrame(seg, 0, 0.5)).toBe(101)
+  })
+
+  it('holds the finish, then resets to setup', () => {
+    expect(spriteFrame(seg, 0, 1)).toBe(101)
+    expect(spriteFrame(seg, 0, 1.2)).toBe(0)
+  })
+
+  it('frames only ever move forward through a stroke', () => {
+    let prev = 0
+    for (let s = 0.001; s < 1; s += 0.001) {
+      const f = spriteFrame(seg, s, null)
+      expect(f).toBeGreaterThanOrEqual(prev)
+      prev = f
+    }
+    for (let t = 0; t < 1.1; t += 0.01) {
+      const f = spriteFrame(seg, 0, t)
+      expect(f).toBeGreaterThanOrEqual(prev)
+      prev = f
+    }
   })
 })
 

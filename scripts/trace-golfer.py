@@ -4,9 +4,10 @@
 Reads   scripts/assets/golfer-reference.png    full swing, 10 key poses
         scripts/assets/golfer-inbetweens.png   AI-generated variant of the full-swing sheet; some of its
                                                poses fall between the key poses and are used as in-betweens
-        scripts/assets/golfer-chipping.png     chipping, 11 poses
         scripts/assets/golfer-putting.png      putting, 16 poses (the first 10 are the stroke)
 Writes  components/tempo/golfer-frames.ts
+
+Chipping is not traced: it plays video frames instead (scripts/build-swing-sprite.py).
 
 Usage: python3 scripts/trace-golfer.py [preview.html]
 Needs opencv-python and numpy. Re-run after replacing a sheet or editing MODES.
@@ -34,7 +35,6 @@ SHEETS = {
     'ref': dict(file='golfer-reference.png', rows=[(20, 393), (530, 850)], gap=12, poses=10),
     # poses 9 and 10 of this sheet nearly touch
     'mid': dict(file='golfer-inbetweens.png', rows=[(24, 322), (438, 692)], gap=1, poses=10),
-    'chip': dict(file='golfer-chipping.png', rows=[(40, 423), (556, 883)], gap=4, poses=11),
     # thicken: fatten hairlines by this many pixels before tracing — the putter shaft is 1 px wide
     # soft: grey level under which hairlines also count as artwork — parts of the shaft are drawn in light grey
     'putt': dict(file='golfer-putting.png', rows=[(138, 394), (571, 815)], gap=4, poses=16, thicken=1, soft=200),
@@ -65,22 +65,6 @@ MODES = {
             ('release', 'mid', 9),
             ('followThrough', 'ref', 9),
             ('finish', 'ref', 10),
-        ],
-    ),
-    'chipping': dict(
-        ball=('chip', 2, 399, 414, 5.5),
-        frames=[
-            ('setup', 'chip', 1),
-            ('earlyTakeaway', 'chip', 2),
-            ('midTakeaway', 'chip', 3),
-            ('waistHigh', 'chip', 4),
-            ('top', 'chip', 5),
-            ('downswing', 'chip', 6),
-            ('approach', 'chip', 7),
-            ('impact', 'chip', 8),
-            ('earlyFollowThrough', 'chip', 9),
-            ('followThrough', 'chip', 10),
-            ('finish', 'chip', 11),
         ],
     ),
     # Sheet poses 11–16 are post-stroke stills (ball rolling, alignment check, …)
@@ -263,17 +247,17 @@ def main():
         '// Golfer silhouettes for the swing dial, in its 200×200 viewBox. Fill with fill-rule="evenodd".',
         '// Frame order per shot type is set by MODES in the script; SWING_ANIMATION in lib/tempo.ts indexes into it.',
         '',
-        "import type { TempoMode } from '@/lib/tempo'",
+        "import type { TracedMode } from '@/lib/tempo'",
         '',
         'export const GOLFER_POSES = {',
         *[f"  {mode}: [{', '.join(repr(n) for n, _, _ in spec['frames'])}]," for mode, spec in MODES.items()],
         '} as const',
         '',
-        'export const GOLFER_BALL: Record<TempoMode, { cx: number; cy: number; r: number }> = {',
+        'export const GOLFER_BALL: Record<TracedMode, { cx: number; cy: number; r: number }> = {',
         *[f"  {mode}: {{ cx: {b['cx']}, cy: {b['cy']}, r: {b['r']} }}," for mode, (_, b) in built.items()],
         '}',
         '',
-        'export const GOLFER_FRAMES: Record<TempoMode, string[]> = {',
+        'export const GOLFER_FRAMES: Record<TracedMode, string[]> = {',
     ]
     for mode, (paths, _) in built.items():
         lines += [f'  {mode}: [', *[f"    '{d}'," for d in paths], '  ],']
