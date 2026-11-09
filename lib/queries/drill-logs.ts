@@ -26,12 +26,15 @@ export async function getBlockDrills(blockId: string): Promise<BlockDrillItem[]>
         .filter(l => l.drill_id === btd.drill_id)
         .sort((a, b) => { const d = b.log_date.localeCompare(a.log_date); return d !== 0 ? d : b.created_at.localeCompare(a.created_at) })
       const lastLog = drillLogs[0] ?? null
+      const todayLog = drillLogs.find(l => l.log_date === todayStr) ?? null
       return {
         drill, sort_order: Number(btd.sort_order),
         done_today: drillLogs.some(l => l.log_date === todayStr),
         session_count: drillLogs.length,
         last_score: lastLog ? Number(lastLog.score) : null,
         last_log_date: lastLog ? lastLog.log_date : null,
+        scores: drillLogs.map(l => Number(l.score)).reverse(),
+        today_score: todayLog ? Number(todayLog.score) : null,
       } satisfies BlockDrillItem
     })
     .filter((x): x is BlockDrillItem => x !== null)

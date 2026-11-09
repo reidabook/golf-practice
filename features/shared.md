@@ -73,6 +73,14 @@
 - Focus ring is `flag`; `prefers-reduced-motion` disables animation globally
 - Charts use `hsl(var(--token))` colours so they follow the theme
 
+### Scorecard strip (`components/ui/scorecard-strip.tsx`)
+- One joined row of boxes, one per session, holding the scores in logged order — like a golf scorecard
+- **Circle** (fairway) = better than the score before; **square** (stripe) = worse; plain = same or first score. "Better" follows the drill's scoring direction (`lib/scorecard.ts → markFor`, unit-tested)
+- Empty boxes = sessions still to play; `highlightNext` gives the next one a flag-yellow fill and underline
+- `showBest` adds a flag-yellow corner to the best score
+- `animateIndex` draws that box's mark in (300 ms) — used right after saving
+- Data: `getBlockDrills()` returns `scores` (oldest first) and `today_score` per drill
+
 ### Feedback
 - Status badges: Default, Done, Active, Ended Early, Skipped, trend indicators (↑ ↓ → ★)
 - Trend colours: fairway (improved), stripe (declined), rough (same), flag (first entry)

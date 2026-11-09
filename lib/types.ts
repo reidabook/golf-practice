@@ -64,6 +64,8 @@ export interface BlockDrillItem {
   session_count: number    // total non-skipped scored logs for this drill in this block
   last_score: number | null
   last_log_date: string | null
+  scores: number[]         // non-skipped scores in this block, oldest first (scorecard strip)
+  today_score: number | null  // most recent score logged today, if any
 }
 
 export interface DrillComparison {

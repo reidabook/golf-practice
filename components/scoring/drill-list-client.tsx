@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { CheckCircle2 } from 'lucide-react'
+import { ScorecardStrip } from '@/components/ui/scorecard-strip'
 
 interface BlockDrillListClientProps {
   block: TrainingBlock
@@ -192,6 +193,7 @@ function DrillRow({
             {item.session_count}/{targetSessions} sessions
           </span>
         </p>
+        <ScorecardStrip className="mt-2" scores={item.scores} total={targetSessions} direction={drill.scoring_direction} unit={drill.unit} showBest highlightNext={!item.done_today} />
       </div>
       <div className="ml-3 flex items-center gap-2 shrink-0">
         {isBlockComplete ? (
