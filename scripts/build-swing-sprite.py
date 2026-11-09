@@ -35,12 +35,15 @@ SHOTS = {
     'full': dict(
         phases={
             # back: standing still before 12; reaches Top at 50, then carries on into a whole extra swing.
-            # down and through are one continuous stretch of clip-down: holding at Top before 14, impact at 42,
-            # then it carries on into a follow-through that reaches the finish at 72 (no separate clip needed)
+            # down and through are one continuous stretch of clip-down: holding at Top before 14, impact at 41,
+            # then it carries on into a follow-through that reaches the finish at 72 (no separate clip needed).
+            # 42 is skipped: the club is hidden behind the leg there
             'back': ('clip-back.mp4', 12, 50, 48, 4),
-            'down': ('clip-down.mp4', 14, 42, 24, 1),
-            'through': ('clip-down.mp4', 42, 72, 30, 1),
+            'down': ('clip-down.mp4', 14, 41, 24, 1),
+            'through': ('clip-down.mp4', 41, 72, 30, 1, dict(skip=(42,))),
         },
+        # The club is motion-blurred to grey through impact and the follow-through: keep it solid
+        solid=170,
         through_seconds=0.5,
         reset_at=1.1,
     ),
@@ -59,11 +62,12 @@ SHOTS = {
         phases={
             # A putt is a pendulum, so the forward stroke is the backstroke played backwards: the generated
             # forward-stroke clips overshot and drew the putter fading out near impact. back: after a practice
-            # stroke, the putter leaves the ball at 50 and reaches Top at 93; 54–56 are skipped because the putter
-            # fades out in them. through: after a rehearsal stroke, impact (28) to the finish (56). No
+            # stroke, the putter leaves the ball at 50 and is furthest back at 72 (it then drifts forward again
+            # to the Top still at 93, which looked like a bounce); 54–56 are skipped because the putter fades
+            # out in them. through: after a rehearsal stroke, impact (28) to the finish (56). No
             # interpolation: the thin putter confuses it into frames that jump back and forth
-            'back': ('clip-back.mp4', 50, 93, 36, 1, dict(skip=(54, 55, 56))),
-            'down': ('clip-back.mp4', 50, 93, 18, 1, dict(skip=(54, 55, 56), reverse=True)),
+            'back': ('clip-back.mp4', 50, 72, 36, 1, dict(skip=(54, 55, 56))),
+            'down': ('clip-back.mp4', 50, 72, 18, 1, dict(skip=(54, 55, 56), reverse=True)),
             'through': ('clip-through.mp4', 28, 56, 24, 1),
         },
         # The putter shaft is drawn in pale grey and fades in some frames: keep thin lines this dark as solid
@@ -75,6 +79,7 @@ SHOTS = {
 }
 
 DARK = 110  # grey level below which a pixel is artwork
+BALL_AREA = 250  # video pixels: dark shapes smaller than this are the ball (or specks), not the golfer or club
 PX_PER_UNIT = 2.0  # sprite pixels per dial viewBox unit (the dial is 200 units across, 256 CSS px)
 COLS = 12  # frames per row in a sheet
 # Where the setup golfer stands in the dial (viewBox units): middle of the feet and ground line, and the
@@ -149,14 +154,14 @@ def prepare(shot, spec, workdir):
         counts[phase] = count
         print(f'  {shot} {phase}: {count} frames from {len(usable)}')
 
-    # One crop window for every frame, around the golfer and club (the largest dark shape in each frame).
-    # The ball flying off after impact is left out, so it leaves the picture at the window's edge.
+    # One crop window for every frame, around the golfer and club: every dark shape bigger than the ball (the
+    # club head can be a separate shape when the shaft is motion-blurred). The ball flying off after impact is
+    # left out, so it leaves the picture at the window's edge.
     ink = np.zeros(frames[0].shape[:2], bool)
     for f in frames:
-        dark = (cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) < DARK).astype(np.uint8)
-        dark = cv2.dilate(dark, np.ones((5, 5), np.uint8))  # bridge thin gaps along the shaft
+        dark = (cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) < spec.get('solid', DARK)).astype(np.uint8)
         n, labels, stats, _ = cv2.connectedComponentsWithStats(dark, 8)
-        ink |= labels == 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+        ink |= np.isin(labels, 1 + np.flatnonzero(stats[1:, cv2.CC_STAT_AREA] >= BALL_AREA))
     ys, xs = np.where(ink)
     h, w = ink.shape
     if ys.min() == 0 or xs.min() == 0 or xs.max() == w - 1:
@@ -206,7 +211,7 @@ def render(shot, spec, prep, height):
     sheet = np.zeros((rows * fh, COLS * fw, 4), np.uint8)
     for i, f in enumerate(frames):
         g = cv2.cvtColor(f[y0:y1, x0:x1], cv2.COLOR_BGR2GRAY)
-        alpha = np.clip((paper - 8 - g.astype(np.float32)) / (paper - 8 - 30), 0, 1)
+        alpha = np.clip((paper - 8 - g.astype(np.float32)) / (paper - 8 - spec.get('solid', 30)), 0, 1)
         if hairline:
             # Thin pale lines (what a 5×5 opening wipes out) above the ground count as solid artwork
             pale = (g < hairline).astype(np.uint8)
