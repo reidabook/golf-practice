@@ -37,8 +37,8 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
   // Handicap is lower-is-better: declining trend (slope ≤ 0) = improving = green
   const trendColor =
     regression && regression.slope <= 0
-      ? 'hsl(142 71% 45%)'
-      : 'hsl(0 84% 60%)'
+      ? 'hsl(var(--fairway))'
+      : 'hsl(var(--stripe))'
 
   const chartData = snapshots.map((s, i) => {
     const [, month, day] = s.snapshot_date.split('-')
@@ -60,7 +60,7 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
         cx={cx}
         cy={cy}
         r={3}
-        fill="hsl(142 71% 45%)"
+        fill="hsl(var(--fairway))"
         stroke="none"
       />
     )
@@ -71,23 +71,23 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
       <CardContent className="pt-4 pb-2">
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 18%)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 64%)' }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--rough))', fontFamily: 'var(--font-display)' }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 64%)' }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--rough))', fontFamily: 'var(--font-display)' }}
               tickLine={false}
               axisLine={false}
               domain={['auto', 'auto']}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(0 0% 7%)',
-                border: '1px solid hsl(0 0% 18%)',
+                backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--ink))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '0.5rem',
                 fontSize: 12,
               }}
@@ -118,7 +118,7 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
             <Line
               type="monotone"
               dataKey="handicap"
-              stroke="hsl(142 71% 45%)"
+              stroke="hsl(var(--fairway))"
               strokeWidth={2}
               dot={renderDot}
               activeDot={{ r: 5 }}

@@ -176,26 +176,26 @@ function DrillRow({
     <Link
       href={`/blocks/${blockId}/drills/${drill.id}`}
       className={`flex items-center justify-between rounded-lg border bg-card px-4 py-3 active:bg-accent transition-colors ${
-        isBlockComplete ? 'border-green-500/30 opacity-70' : 'border-border'
+        isBlockComplete ? 'border-fairway/30 opacity-70' : 'border-border'
       }`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          {isBlockComplete && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />}
+          {isBlockComplete && <CheckCircle2 className="w-4 h-4 text-fairway shrink-0" />}
           <p className="font-medium truncate">{drill.name}</p>
         </div>
         <p className="text-sm text-muted-foreground">
           {drill.unit}
           {item.last_score !== null && ` · Last: ${item.last_score}`}
           {' · '}
-          <span className={isBlockComplete ? 'text-green-600' : ''}>
+          <span className={isBlockComplete ? 'text-fairway' : ''}>
             {item.session_count}/{targetSessions} sessions
           </span>
         </p>
       </div>
       <div className="ml-3 flex items-center gap-2 shrink-0">
         {isBlockComplete ? (
-          <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-600">
+          <Badge variant="default" className="text-xs bg-fairway">
             Complete
           </Badge>
         ) : (

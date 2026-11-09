@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  darkMode: ['class'],
+  darkMode: 'media',
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -15,7 +15,17 @@ const config: Config = {
       screens: { '2xl': '1400px' },
     },
     extend: {
+      fontFamily: {
+        sans: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'system-ui', 'sans-serif'],
+      },
       colors: {
+        chalk: 'hsl(var(--chalk))',
+        ink: 'hsl(var(--ink))',
+        rough: 'hsl(var(--rough))',
+        fairway: 'hsl(var(--fairway))',
+        flag: { DEFAULT: 'hsl(var(--flag))', ink: 'hsl(var(--flag-ink))' },
+        stripe: 'hsl(var(--stripe))',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -56,6 +66,9 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
+        'draw-mark': { from: { strokeDashoffset: '1' }, to: { strokeDashoffset: '0' } },
+        'tick-up': { from: { transform: 'translateY(0.18em)', opacity: '0.4' }, to: { transform: 'translateY(0)', opacity: '1' } },
+        'tick-down': { from: { transform: 'translateY(-0.18em)', opacity: '0.4' }, to: { transform: 'translateY(0)', opacity: '1' } },
         'accordion-down': {
           from: { height: '0' },
           to: { height: 'var(--radix-accordion-content-height)' },
@@ -68,6 +81,9 @@ const config: Config = {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'draw-mark': 'draw-mark 0.3s ease-out both',
+        'tick-up': 'tick-up 0.14s ease-out',
+        'tick-down': 'tick-down 0.14s ease-out',
       },
     },
   },

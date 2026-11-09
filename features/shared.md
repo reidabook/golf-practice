@@ -66,9 +66,16 @@
 
 ## UI Patterns
 
+### Visual system ("Range Card", see `features/redesign/spec.md`)
+- Light by default (readable in sunlight); dark follows the phone's system setting — no in-app toggle. Tailwind `darkMode: 'media'`
+- Tokens in `app/globals.css`: `chalk` (page), `ink` (text), `rough` (secondary text), `fairway` (primary / better), `flag` (accent, focus ring, personal best), `stripe` (destructive / worse). shadcn names (`primary`, `muted`…) map onto them. Never use raw Tailwind colours (`green-500` etc.)
+- Type: Archivo (`font-display`, width axis) for numerals and labels; Atkinson Hyperlegible (`font-sans`) for body. Utility classes: `.label` (condensed uppercase), `.numeral` (wide tabular), `.screen-title`
+- Focus ring is `flag`; `prefers-reduced-motion` disables animation globally
+- Charts use `hsl(var(--token))` colours so they follow the theme
+
 ### Feedback
 - Status badges: Default, Done, Active, Ended Early, Skipped, trend indicators (↑ ↓ → ★)
-- Colored trend badges: green (improved), red (declined), yellow (same), blue (first entry)
+- Trend colours: fairway (improved), stripe (declined), rough (same), flag (first entry)
 - Progress bar with percentage text
 - Toast notifications for success and error states
 - Loading states on buttons ("Saving...", "Deleting...")

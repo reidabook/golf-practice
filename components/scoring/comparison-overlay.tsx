@@ -9,10 +9,10 @@ interface DrillComparisonOverlayProps {
 }
 
 const trendConfig = {
-  better: { icon: '↑', color: 'text-green-500', label: 'Improved' },
-  worse:  { icon: '↓', color: 'text-red-500',   label: 'Declined' },
-  same:   { icon: '→', color: 'text-yellow-500', label: 'Same' },
-  first:  { icon: '★', color: 'text-blue-500',   label: 'First Entry' },
+  better: { icon: '↑', color: 'text-fairway', label: 'Improved' },
+  worse:  { icon: '↓', color: 'text-stripe',   label: 'Declined' },
+  same:   { icon: '→', color: 'text-muted-foreground', label: 'Same' },
+  first:  { icon: '★', color: 'text-flag-ink dark:text-flag',   label: 'First Entry' },
 }
 
 export function DrillComparisonOverlay({ comparison, onDismiss }: DrillComparisonOverlayProps) {

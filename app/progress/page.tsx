@@ -33,10 +33,10 @@ export default async function ProgressPage() {
       <h1 className="text-2xl font-bold">Progress</h1>
 
       {!syncResult.ok && (
-        <div className="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-400">
+        <div className="rounded-lg border border-flag bg-flag/15 px-4 py-3 text-sm text-foreground">
           Handicap sync failed — check Vercel logs for details.
           {syncResult.error && (
-            <span className="block mt-1 text-xs text-amber-600">{syncResult.error}</span>
+            <span className="block mt-1 text-xs text-muted-foreground">{syncResult.error}</span>
           )}
         </div>
       )}

@@ -77,7 +77,7 @@ export function ProgressChart({ progress }: ProgressChartProps) {
         cx={cx}
         cy={cy}
         r={3}
-        fill="hsl(142 71% 45%)"
+        fill="hsl(var(--fairway))"
         stroke="none"
       />
     )
@@ -88,23 +88,23 @@ export function ProgressChart({ progress }: ProgressChartProps) {
       <CardContent className="pt-4 pb-2">
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 18%)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 64%)' }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--rough))', fontFamily: 'var(--font-display)' }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 64%)' }}
+              tick={{ fontSize: 10, fill: 'hsl(var(--rough))', fontFamily: 'var(--font-display)' }}
               tickLine={false}
               axisLine={false}
               domain={['auto', 'auto']}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'hsl(0 0% 7%)',
-                border: '1px solid hsl(0 0% 18%)',
+                backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--ink))',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: '0.5rem',
                 fontSize: 12,
               }}
@@ -123,9 +123,9 @@ export function ProgressChart({ progress }: ProgressChartProps) {
               <ReferenceLine
                 key={name as string}
                 x={name as string}
-                stroke="hsl(0 0% 40%)"
+                stroke="hsl(var(--rough))"
                 strokeDasharray="4 2"
-                label={{ value: '│', fontSize: 10, fill: 'hsl(0 0% 40%)' }}
+                label={{ value: '│', fontSize: 10, fill: 'hsl(var(--rough))' }}
               />
             ))}
 
@@ -134,7 +134,7 @@ export function ProgressChart({ progress }: ProgressChartProps) {
               <Line
                 type="linear"
                 dataKey="trend"
-                stroke="hsl(142 71% 45%)"
+                stroke="hsl(var(--fairway))"
                 strokeWidth={1.5}
                 strokeDasharray="6 3"
                 strokeOpacity={0.6}
@@ -147,7 +147,7 @@ export function ProgressChart({ progress }: ProgressChartProps) {
             <Line
               type="monotone"
               dataKey="score"
-              stroke="hsl(142 71% 45%)"
+              stroke="hsl(var(--fairway))"
               strokeWidth={2}
               dot={renderDot}
               activeDot={{ r: 5 }}

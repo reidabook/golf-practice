@@ -91,7 +91,7 @@ export function ScoreInput({ drill, value, onChange }: ScoreInputProps) {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40 bg-black/20"
+            className="fixed inset-0 z-40 bg-ink/20"
             onPointerDown={closeNumpad}
           />
           <div className="fixed inset-x-0 bottom-0 z-50">

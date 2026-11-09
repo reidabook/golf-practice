@@ -47,7 +47,7 @@ export function DrillForm({ drill, onSave, onClose, isPending }: DrillFormProps)
   }
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/60 flex items-end justify-center overflow-hidden">
+    <div className="fixed inset-0 z-[60] bg-ink/50 flex items-end justify-center overflow-hidden">
       <div className="bg-background w-full max-w-lg rounded-t-2xl border-t border-border max-h-[90vh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between px-4 py-4 border-b border-border">
           <h2 className="font-semibold">{drill ? 'Edit Drill' : 'New Drill'}</h2>
