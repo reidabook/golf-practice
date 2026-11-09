@@ -1,4 +1,4 @@
-const CACHE_NAME = 'golf-practice-v2'
+const CACHE_NAME = 'golf-practice-v3'
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

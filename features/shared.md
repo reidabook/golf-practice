@@ -6,7 +6,9 @@
 
 ## Navigation
 
-- Bottom tab bar with 6 tabs: Home, History, Progress, Drills, Plan, Tempo
+- Bottom tab bar with 4 tabs: Today (`/`), Progress, Library, Tempo. Active tab: fairway icon + label and a fairway bar on top
+- Old URLs redirect (`next.config.ts`): `/drills` → `/library`, `/plan` → `/library?tab=guides`, `/history` → `/progress#blocks`
+- Today is active on `/` and `/blocks/...`; Progress is active on `/progress` and `/history/...`
 - Play Mode (`/play`, `/play/round`) is hidden — no nav tab, reachable by direct URL only
 - Sticky, safe-area aware (notch devices)
 - Breadcrumb navigation on nested screens (e.g., History > Block Name)
@@ -36,7 +38,7 @@
 - **Block deletion**: removes block row + all associated drill log rows (cascaded manually in `deleteBlock` action)
 - **Block completion**: automatic when every drill reaches `target_sessions` → shows completion screen; or manually via "Mark Complete"
 - **End early**: sets status to `ended_early` via the drill list's End Early button; block moves to history
-- **Multiple active blocks**: allowed — no single-active constraint
+- **One active block at a time**: `startBlock` ends any active block early before starting the new one; the UI confirms first
 
 ### Sessions model
 - `target_sessions` on `training-blocks` and `block-templates` tabs: how many times each drill must be scored (non-skipped) to finish the block

@@ -101,12 +101,13 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 | Path | File | Notes |
 |---|---|---|
 | `/` | `app/page.tsx` | Active block card, start/continue day CTA |
-| `/history` | `app/history/page.tsx` | All blocks list with drill progress |
+| `/history` | — | Redirects to `/progress#blocks` (`next.config.ts`) |
 | `/history/:blockId` | `app/history/[blockId]/page.tsx` | Block detail + per-drill progress |
 | `/blocks/:blockId/drills` | `app/blocks/[blockId]/drills/page.tsx` | Drill scoring wizard for today |
 | `/blocks/:blockId/drills/:drillId` | `app/blocks/[blockId]/drills/[drillId]/page.tsx` | Single drill full-screen scorer |
 | `/progress` | `app/progress/page.tsx` | All-time line charts per drill |
-| `/drills` | `app/drills/page.tsx` | Block templates + drill library CRUD |
+| `/library` | `app/library/page.tsx` | Drills · Blocks · Guides (`components/library/library-client.tsx`) |
+| `/drills`, `/plan` | — | Redirect to `/library` / `/library?tab=guides` |
 | `/tempo` | `app/tempo/page.tsx` | Tempo trainer — client-only (`components/tempo/tempo-page-client.tsx`), no sheet access |
 | `/play`, `/play/round` | `app/play/page.tsx`, `app/play/round/page.tsx` | Play Mode — hidden: not linked from nav, reachable by URL only |
 | `/api/debug` | `app/api/debug/route.ts` | Connection diagnostics — remove before production |
@@ -119,9 +120,9 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 
 | Operation | File |
 |---|---|
-| Read all | `lib/queries/drills.ts → getDrills()` ← `app/drills/page.tsx` |
+| Read all | `lib/queries/drills.ts → getDrills()` ← `app/library/page.tsx` |
 | Read one | `lib/queries/drills.ts → getDrill(id)` |
-| Create / Update / Delete | `lib/actions/drills.ts` ← `components/library/drills-page-client.tsx` |
+| Create / Update / Delete | `lib/actions/drills.ts` ← `components/library/library-client.tsx` |
 
 **If you add a column:** update `rowToDrill()` in `lib/queries/drills.ts`, the `addRow` call in `lib/actions/drills.ts`, and the drill form in `components/library/drill-form.tsx`.
 
@@ -131,8 +132,8 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 
 | Operation | File |
 |---|---|
-| Read all | `lib/queries/templates.ts → getTemplates()` ← `app/page.tsx`, `app/drills/page.tsx` |
-| Create / Update / Delete | `lib/actions/templates.ts` ← `components/library/drills-page-client.tsx` |
+| Read all | `lib/queries/templates.ts → getTemplates()` ← `app/page.tsx`, `app/library/page.tsx` |
+| Create / Update / Delete | `lib/actions/templates.ts` ← `components/library/library-client.tsx` |
 
 `updateTemplate` deletes all junction rows for the template then re-inserts them — no partial update.
 
@@ -145,7 +146,7 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 | Read active | `lib/queries/blocks.ts → getActiveBlock()` ← `app/page.tsx` |
 | Read all | `lib/queries/blocks.ts → getBlocks()` ← `app/history/page.tsx` |
 | Read one | `lib/queries/blocks.ts → getBlock(id)` ← `app/history/[blockId]/page.tsx` |
-| Start / Complete / End Early / Extend / Delete | `lib/actions/blocks.ts` |
+| Start / Complete / End Early / Extend / Delete | `lib/actions/blocks.ts` (`startBlock` ends any active block first — one block at a time) |
 
 `deleteBlock` deletes all associated `drill-logs` rows first (no cascade in Sheets).
 
@@ -160,7 +161,7 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 | Read for progress charts | `lib/queries/progress.ts → getProgressForAllDrills()` ← `app/progress/page.tsx` |
 | Save score | `lib/actions/drill-logs.ts → saveDrillLog()` ← `components/scoring/scoring-client.tsx` |
 | Skip drill | `lib/actions/drill-logs.ts → skipDrillLog()` ← `components/scoring/scoring-client.tsx` |
-| Log ad-hoc | `lib/actions/drill-logs.ts → logDrillScore()` ← `components/library/drills-page-client.tsx` |
+| Log ad-hoc | `lib/actions/drill-logs.ts → logDrillScore()` ← `components/library/library-client.tsx` |
 
 ---
 
@@ -169,9 +170,9 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 | Action | Exported functions | Used by |
 |---|---|---|
 | `lib/actions/blocks.ts` | `startBlock`, `completeBlock`, `endBlockEarly`, `extendBlock`, `deleteBlock` | `app/page.tsx`, block detail pages |
-| `lib/actions/drill-logs.ts` | `saveDrillLog`, `skipDrillLog`, `logDrillScore` | `components/scoring/scoring-client.tsx`, `components/library/drills-page-client.tsx` |
-| `lib/actions/drills.ts` | `createDrill`, `updateDrill`, `deleteDrill` | `components/library/drills-page-client.tsx` |
-| `lib/actions/templates.ts` | `createTemplate`, `updateTemplate`, `deleteTemplate` | `components/library/drills-page-client.tsx` |
+| `lib/actions/drill-logs.ts` | `saveDrillLog`, `skipDrillLog`, `logDrillScore` | `components/scoring/scoring-client.tsx`, `components/library/library-client.tsx` |
+| `lib/actions/drills.ts` | `createDrill`, `updateDrill`, `deleteDrill` | `components/library/library-client.tsx` |
+| `lib/actions/templates.ts` | `createTemplate`, `updateTemplate`, `deleteTemplate` | `components/library/library-client.tsx` |
 
 All actions call `invalidateSheetCache()` then `revalidatePath()` after mutations.
 

@@ -4,10 +4,18 @@ import { getSheet, getRows, newId, nowISO, invalidateSheetCache } from '@/lib/sh
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+// One block runs at a time: starting a block ends any active one early (the UI confirms first).
 export async function startBlock(templateId: string): Promise<void> {
-  const templateRows = await getRows('block_templates')
+  const [templateRows, blockRows] = await Promise.all([getRows('block_templates'), getRows('training_blocks')])
   const template = templateRows.find(r => r.get('id') === templateId)
   if (!template) throw new Error('Template not found')
+
+  const stamp = nowISO()
+  for (const row of blockRows.filter(r => r.get('status') === 'active')) {
+    row.set('status', 'ended_early')
+    row.set('completed_at', stamp)
+    await row.save()
+  }
 
   const blockId = newId()
   const sheet = await getSheet('training_blocks')
@@ -17,7 +25,7 @@ export async function startBlock(templateId: string): Promise<void> {
     name:            template.get('name'),
     target_sessions: template.get('target_sessions'),
     status:          'active',
-    started_at:      nowISO(),
+    started_at:      stamp,
     completed_at:    '',
   })
 
