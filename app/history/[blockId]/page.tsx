@@ -1,84 +1,110 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { getBlock } from '@/lib/queries/blocks'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { BlockCompletionSummary } from '@/components/history/block-completion-summary'
-import { formatDate, formatScoreWithUnit } from '@/lib/utils'
+import { ScorecardStrip } from '@/components/ui/scorecard-strip'
+import { MarkLegend, SectionLabel } from '@/components/ui/page'
+import { formatDate } from '@/lib/utils'
+import type { Drill } from '@/lib/types'
 
-export default async function BlockDetailPage({
-  params,
-}: {
-  params: Promise<{ blockId: string }>
-}) {
+const STATUS_LABEL = { active: 'Running', completed: 'Done', ended_early: 'Ended early' } as const
+
+export default async function BlockDetailPage({ params }: { params: Promise<{ blockId: string }> }) {
   const { blockId } = await params
   const block = await getBlock(blockId)
   if (!block) notFound()
 
   const totalDays = block.day_logs.length
 
+  // Per-drill scores, oldest first, for the scorecard strips
+  const byDrill = new Map<string, { drill: Drill; scores: number[] }>()
+  for (const day of [...block.day_logs].reverse()) {
+    for (const log of [...day.drills].reverse()) {
+      if (log.skipped || log.score === null) continue
+      const entry = byDrill.get(log.drill_id) ?? { drill: log.drill, scores: [] }
+      entry.scores.push(log.score)
+      byDrill.set(log.drill_id, entry)
+    }
+  }
+
   return (
-    <div className="p-4 space-y-4">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Link href="/history" className="text-sm text-muted-foreground hover:text-foreground">
-            History
-          </Link>
-          <span className="text-muted-foreground">/</span>
-          <span className="text-sm">{block.name}</span>
-        </div>
-        <h1 className="text-2xl font-bold">{block.name}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+    <div>
+      <header className="px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <Link href="/progress#blocks" className="-ml-2 inline-flex h-11 items-center gap-1.5 rounded-md px-2 font-bold text-muted-foreground active:bg-accent">
+          <ArrowLeft className="h-5 w-5" />
+          Progress
+        </Link>
+        <p className="label mt-2">{STATUS_LABEL[block.status]}</p>
+        <h1 className="screen-title mt-1 text-balance">{block.name}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           {formatDate(block.started_at)}
-          {block.completed_at && ` → ${formatDate(block.completed_at)}`}
+          {block.completed_at && ` – ${formatDate(block.completed_at)}`} · {totalDays} day{totalDays !== 1 ? 's' : ''} logged · {block.target_sessions} session target
         </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {totalDays} day{totalDays !== 1 ? 's' : ''} logged · {block.target_sessions} session target
-        </p>
-      </div>
+      </header>
 
-      {/* Completion summary for finished blocks with ≥2 days */}
-      {(block.status === 'completed' || block.status === 'ended_early') && block.day_logs.length >= 2 && (
-        <BlockCompletionSummary block={block} />
-      )}
+      <div className="space-y-8 px-4">
+        {(block.status === 'completed' || block.status === 'ended_early') && block.day_logs.length >= 2 && (
+          <BlockCompletionSummary block={block} />
+        )}
 
-      {/* Day-grouped drill logs (newest first) */}
-      {block.day_logs.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No drills logged yet.</p>
-      ) : (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Drill Logs
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-0 p-0">
-            {block.day_logs.map((dayLog, i) => (
-              <div key={dayLog.log_date}>
-                {i > 0 && <Separator />}
-                <div className="px-6 py-4">
-                  <p className="text-sm font-semibold mb-2">{formatDate(dayLog.log_date)}</p>
-                  <div className="space-y-1.5">
+        {byDrill.size > 0 && (
+          <section>
+            <SectionLabel trailing={<MarkLegend />}>Scorecard</SectionLabel>
+            <div className="divide-y overflow-hidden rounded-lg border bg-card">
+              {[...byDrill.values()].map(({ drill, scores }) => (
+                <div key={drill.id} className="px-4 py-3.5">
+                  <p className="mb-2 flex items-baseline justify-between gap-3">
+                    <span className="truncate font-bold">{drill.name}</span>
+                    <span className="label shrink-0 normal-case tracking-normal">
+                      {drill.unit} {drill.scoring_direction === 'lower_better' ? '↓' : '↑'}
+                    </span>
+                  </p>
+                  <ScorecardStrip
+                    scores={scores}
+                    total={Math.max(block.target_sessions, scores.length)}
+                    direction={drill.scoring_direction}
+                    unit={drill.unit}
+                    showBest
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <SectionLabel>By day</SectionLabel>
+          {block.day_logs.length === 0 ? (
+            <p className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+              Nothing logged in this block yet.
+            </p>
+          ) : (
+            <div className="divide-y overflow-hidden rounded-lg border bg-card">
+              {block.day_logs.map((dayLog) => (
+                <div key={dayLog.log_date} className="px-4 py-3.5">
+                  <p className="label mb-2">{formatDate(dayLog.log_date)}</p>
+                  <ul className="space-y-1.5">
                     {dayLog.drills.map((entry) => (
-                      <div key={entry.id} className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">{entry.drill.name}</span>
+                      <li key={entry.id} className="flex items-baseline justify-between gap-3 text-[15px]">
+                        <span className="truncate">{entry.drill.name}</span>
                         {entry.skipped ? (
-                          <Badge variant="secondary" className="text-xs">Skipped</Badge>
+                          <span className="label">Skipped</span>
                         ) : (
-                          <span className="text-sm font-mono font-semibold">
-                            {formatScoreWithUnit(entry.score, entry.drill.unit)}
+                          <span className="shrink-0">
+                            <span className="numeral">{entry.score}</span>{' '}
+                            <span className="text-sm text-muted-foreground">{entry.drill.unit}</span>
                           </span>
                         )}
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

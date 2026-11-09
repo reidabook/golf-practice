@@ -102,10 +102,10 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 |---|---|---|
 | `/` | `app/page.tsx` | Today — running block's drills (`components/today/today-client.tsx`), or block picker |
 | `/history` | — | Redirects to `/progress#blocks` (`next.config.ts`) |
-| `/history/:blockId` | `app/history/[blockId]/page.tsx` | Block detail + per-drill progress |
+| `/history/:blockId` | `app/history/[blockId]/page.tsx` | Block detail (reached from Progress → Past blocks) |
 | `/blocks/:blockId/drills` | `app/blocks/[blockId]/drills/page.tsx` | Redirects to `/` |
 | `/blocks/:blockId/drills/:drillId` | `app/blocks/[blockId]/drills/[drillId]/page.tsx` | Single drill full-screen scorer |
-| `/progress` | `app/progress/page.tsx` | All-time line charts per drill |
+| `/progress` | `app/progress/page.tsx` | Handicap, per-drill scorecards + charts, past blocks |
 | `/library` | `app/library/page.tsx` | Drills · Blocks · Guides (`components/library/library-client.tsx`) |
 | `/drills`, `/plan` | — | Redirect to `/library` / `/library?tab=guides` |
 | `/tempo` | `app/tempo/page.tsx` | Tempo trainer — client-only (`components/tempo/tempo-page-client.tsx`), no sheet access |
@@ -144,7 +144,7 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 | Operation | File |
 |---|---|
 | Read active | `lib/queries/blocks.ts → getActiveBlock()` ← `app/page.tsx` |
-| Read all | `lib/queries/blocks.ts → getBlocks()` ← `app/history/page.tsx` |
+| Read all | `lib/queries/blocks.ts → getBlocks()` ← `app/progress/page.tsx` |
 | Read one | `lib/queries/blocks.ts → getBlock(id)` ← `app/history/[blockId]/page.tsx` |
 | Start / Complete / End Early / Extend / Delete | `lib/actions/blocks.ts` (`startBlock` ends any active block first — one block at a time) |
 

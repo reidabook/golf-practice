@@ -72,3 +72,13 @@ export function Segmented<T extends string>({
     </div>
   )
 }
+
+/** Key for scorecard marks: circle = better, square = worse. */
+export function MarkLegend() {
+  return (
+    <span className="inline-flex items-center gap-2.5" aria-label="Circle means better, square means worse">
+      <span className="inline-flex items-center gap-1"><span aria-hidden className="h-2.5 w-2.5 rounded-full border-[1.5px] border-fairway" />better</span>
+      <span className="inline-flex items-center gap-1"><span aria-hidden className="h-2.5 w-2.5 border-[1.5px] border-stripe" />worse</span>
+    </span>
+  )
+}

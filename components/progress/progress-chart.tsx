@@ -11,7 +11,6 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { DrillProgress } from '@/lib/types'
-import { Card, CardContent } from '@/components/ui/card'
 
 interface ProgressChartProps {
   progress: DrillProgress
@@ -35,16 +34,15 @@ export function ProgressChart({ progress }: ProgressChartProps) {
   const { drill, dataPoints, blockBoundaries } = progress
 
   if (dataPoints.length < 1) {
-    return (
-      <Card>
-        <CardContent className="h-32 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">No data yet</p>
-        </CardContent>
-      </Card>
-    )
+    return <p className="py-8 text-center text-sm text-muted-foreground">No scores yet</p>
   }
 
   const regression = linearRegression(dataPoints.map((dp) => dp.score))
+  // Trend line is fairway when the drill is improving, stripe when it's getting worse
+  const improving = regression
+    ? drill.scoring_direction === 'higher_better' ? regression.slope >= 0 : regression.slope <= 0
+    : true
+  const trendColor = improving ? 'hsl(var(--fairway))' : 'hsl(var(--stripe))'
 
   const chartData = dataPoints.map((dp, i) => {
     const [, month, day] = dp.date.split('-')
@@ -77,18 +75,18 @@ export function ProgressChart({ progress }: ProgressChartProps) {
         cx={cx}
         cy={cy}
         r={3}
-        fill="hsl(var(--fairway))"
-        stroke="none"
+        fill="hsl(var(--ink))"
+        stroke="hsl(var(--card))"
+        strokeWidth={1.5}
       />
     )
   }
 
   return (
-    <Card>
-      <CardContent className="pt-4 pb-2">
+    <div className="pt-2">
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
             <XAxis
               dataKey="name"
               tick={{ fontSize: 10, fill: 'hsl(var(--rough))', fontFamily: 'var(--font-display)' }}
@@ -106,6 +104,7 @@ export function ProgressChart({ progress }: ProgressChartProps) {
                 backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--ink))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '0.5rem',
+                fontFamily: 'var(--font-body)',
                 fontSize: 12,
               }}
               formatter={(val: number, key: string) => {
@@ -131,30 +130,28 @@ export function ProgressChart({ progress }: ProgressChartProps) {
 
             {/* Trend line (linear regression) */}
             {regression && (
-              <Line
+              <Line isAnimationActive={false}
                 type="linear"
                 dataKey="trend"
-                stroke="hsl(var(--fairway))"
-                strokeWidth={1.5}
-                strokeDasharray="6 3"
-                strokeOpacity={0.6}
+                stroke={trendColor}
+                strokeWidth={2.5}
+                strokeDasharray="6 4"
                 dot={false}
                 activeDot={false}
                 legendType="none"
               />
             )}
 
-            <Line
-              type="monotone"
+            <Line isAnimationActive={false}
+              type="linear"
               dataKey="score"
-              stroke="hsl(var(--fairway))"
-              strokeWidth={2}
+              stroke="hsl(var(--rough))"
+              strokeWidth={1.5}
               dot={renderDot}
               activeDot={{ r: 5 }}
             />
           </LineChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    </div>
   )
 }

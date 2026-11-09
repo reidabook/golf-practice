@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { HandicapSnapshot } from '@/lib/types'
-import { Card, CardContent } from '@/components/ui/card'
 
 interface HandicapChartProps {
   snapshots: HandicapSnapshot[]
@@ -60,18 +59,18 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
         cx={cx}
         cy={cy}
         r={3}
-        fill="hsl(var(--fairway))"
-        stroke="none"
+        fill="hsl(var(--ink))"
+        stroke="hsl(var(--card))"
+        strokeWidth={1.5}
       />
     )
   }
 
   return (
-    <Card>
-      <CardContent className="pt-4 pb-2">
+    <div className="pt-2">
         <ResponsiveContainer width="100%" height={180}>
           <LineChart data={chartData} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
             <XAxis
               dataKey="name"
               tick={{ fontSize: 10, fill: 'hsl(var(--rough))', fontFamily: 'var(--font-display)' }}
@@ -89,6 +88,7 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
                 backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--ink))',
                 border: '1px solid hsl(var(--border))',
                 borderRadius: '0.5rem',
+                fontFamily: 'var(--font-body)',
                 fontSize: 12,
               }}
               formatter={(val: number, key: string) => {
@@ -102,30 +102,28 @@ export function HandicapChart({ snapshots }: HandicapChartProps) {
             />
 
             {regression && (
-              <Line
+              <Line isAnimationActive={false}
                 type="linear"
                 dataKey="trend"
                 stroke={trendColor}
-                strokeWidth={1.5}
-                strokeDasharray="6 3"
-                strokeOpacity={0.6}
+                strokeWidth={2.5}
+                strokeDasharray="6 4"
                 dot={false}
                 activeDot={false}
                 legendType="none"
               />
             )}
 
-            <Line
-              type="monotone"
+            <Line isAnimationActive={false}
+              type="linear"
               dataKey="handicap"
-              stroke="hsl(var(--fairway))"
-              strokeWidth={2}
+              stroke="hsl(var(--rough))"
+              strokeWidth={1.5}
               dot={renderDot}
               activeDot={{ r: 5 }}
             />
           </LineChart>
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    </div>
   )
 }

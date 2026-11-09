@@ -1,7 +1,7 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { SectionLabel } from '@/components/ui/page'
+import { cn } from '@/lib/utils'
 import type { BlockWithDayLogs } from '@/lib/types'
 
 interface BlockCompletionSummaryProps {
@@ -57,38 +57,28 @@ export function BlockCompletionSummary({ block }: BlockCompletionSummaryProps) {
   if (summaries.length === 0) return null
 
   return (
-    <Card className="border-primary/30 bg-primary/5">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Block Complete!</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {day_logs.length} days completed — here&apos;s your progress:
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <section>
+      <SectionLabel trailing={`${day_logs.length} days`}>First day vs last day</SectionLabel>
+      <div className="divide-y overflow-hidden rounded-lg border bg-card">
         {summaries.map((s) => {
           if (!s) return null
           return (
-            <div key={s.drill.id} className="flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{s.drill.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {s.firstScore} → {s.lastScore} {s.drill.unit}
+            <div key={s.drill.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold">{s.drill.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Best <span className="numeral text-foreground">{s.personalBest ?? '—'}</span> {s.drill.unit}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
-                {s.personalBest !== null && (
-                  <Badge variant="outline" className="text-xs">
-                    Best: {s.personalBest}
-                  </Badge>
-                )}
-                <span className="text-lg">
-                  {s.trend === 'better' ? '↑' : s.trend === 'worse' ? '↓' : '→'}
-                </span>
-              </div>
+              <p className="numeral shrink-0 text-lg">
+                <span className="text-muted-foreground">{s.firstScore}</span>
+                <span className="mx-1.5 text-muted-foreground">→</span>
+                <span className={cn(s.trend === 'better' && 'text-fairway', s.trend === 'worse' && 'text-stripe')}>{s.lastScore}</span>
+              </p>
             </div>
           )
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }
