@@ -161,10 +161,10 @@ export function TempoPageClient() {
   const strokeMs = Math.round((timing.back + timing.down) * 1000)
 
   return (
-    <div className="min-h-screen pb-24 pt-6 px-4 max-w-lg mx-auto space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Tempo Trainer</h1>
-        <p className="text-muted-foreground text-sm">Swing to the tones: takeaway, top, impact</p>
+    <div className="mx-auto max-w-lg space-y-5 px-4 pb-8 pt-[max(1.5rem,env(safe-area-inset-top))]">
+      <div>
+        <h1 className="screen-title">Tempo</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Swing to the tones: takeaway, top, impact</p>
       </div>
 
       {/* Mode */}
@@ -188,13 +188,13 @@ export function TempoPageClient() {
       )}
 
       {/* Visual */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <div className="space-y-4 rounded-lg border bg-card p-4">
         <div className="flex items-baseline justify-between">
-          <p className="text-4xl font-bold font-mono tabular-nums">
+          <p className="numeral text-5xl leading-none">
             {metronome ? bpm : preset.id}
-            {metronome && <span className="text-base font-medium text-muted-foreground ml-2">BPM</span>}
+            {metronome && <span className="label ml-2">BPM</span>}
           </p>
-          <p className="text-xs text-muted-foreground text-right">
+          <p className="label text-right normal-case leading-snug tracking-normal">
             {metronome ? (
               <>{strokeMs} ms per stroke</>
             ) : (
@@ -212,27 +212,27 @@ export function TempoPageClient() {
         <button
           onClick={playing ? stop : start}
           className={cn(
-            'w-full flex items-center justify-center gap-2 rounded-lg py-4 font-medium transition-colors',
+            'flex h-14 w-full items-center justify-center gap-2 rounded-lg text-base font-bold transition-[background-color,transform] active:scale-[0.98]',
             playing
-              ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              ? 'bg-ink text-chalk'
               : 'bg-primary text-primary-foreground hover:bg-primary/90'
           )}
         >
-          {playing ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          {playing ? <Square className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current" />}
           {playing ? 'Stop' : 'Start'}
         </button>
       </div>
 
       {/* Tempo */}
       {metronome ? (
-        <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Beats per minute</p>
+        <div className="space-y-3 rounded-lg border bg-card p-4">
+          <p className="label">Beats per minute</p>
           <div className="flex items-center justify-between gap-4">
             <button
               aria-label="Decrease BPM"
               disabled={bpm <= BPM_MIN}
               onClick={() => update({ bpm: clampBpm(bpm - 1) })}
-              className="w-14 h-14 rounded-lg bg-secondary flex items-center justify-center disabled:opacity-40"
+              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-input bg-card disabled:opacity-30"
             >
               <Minus className="w-5 h-5" />
             </button>
@@ -250,7 +250,7 @@ export function TempoPageClient() {
               aria-label="Increase BPM"
               disabled={bpm >= BPM_MAX}
               onClick={() => update({ bpm: clampBpm(bpm + 1) })}
-              className="w-14 h-14 rounded-lg bg-secondary flex items-center justify-center disabled:opacity-40"
+              className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-input bg-card disabled:opacity-30"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -260,8 +260,8 @@ export function TempoPageClient() {
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tempo</p>
+        <div className="space-y-3 rounded-lg border bg-card p-4">
+          <p className="label">Tempo · back/down frames</p>
           <div className="grid grid-cols-3 gap-2">
             {PRESETS[mode].map(p => {
               const active = p.id === preset.id
@@ -271,8 +271,8 @@ export function TempoPageClient() {
                   aria-pressed={active}
                   onClick={() => update({ presets: { ...presets, [mode]: p.id } })}
                   className={cn(
-                    'rounded-lg py-3 text-center font-semibold font-mono transition-colors',
-                    active ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+                    'numeral h-12 rounded-lg text-center text-lg transition-colors',
+                    active ? 'bg-primary text-primary-foreground' : 'border bg-card text-foreground'
                   )}
                 >
                   {p.id}
@@ -285,11 +285,11 @@ export function TempoPageClient() {
       )}
 
       {/* Settings */}
-      <div className="rounded-xl border border-border bg-card divide-y divide-border">
+      <div className="divide-y rounded-lg border bg-card">
         {!metronome && (
           <>
-            <div className="px-5 py-4 flex items-center justify-between gap-4">
-              <span className="text-sm">Repeat</span>
+            <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <span className="font-bold">Repeat</span>
               <button
                 role="switch"
                 aria-checked={repeat}
@@ -297,19 +297,19 @@ export function TempoPageClient() {
                 onClick={() => update({ repeat: !repeat })}
                 className={cn(
                   'relative w-12 h-7 rounded-full transition-colors',
-                  repeat ? 'bg-primary' : 'bg-secondary'
+                  repeat ? 'bg-primary' : 'bg-input'
                 )}
               >
                 <span
                   className={cn(
-                    'absolute top-1 left-1 w-5 h-5 rounded-full bg-foreground transition-transform',
+                    'absolute left-1 top-1 h-5 w-5 rounded-full bg-card shadow transition-transform',
                     repeat && 'translate-x-5'
                   )}
                 />
               </button>
             </div>
-            <div className="px-5 py-4 flex items-center justify-between gap-4">
-              <span className="text-sm">Rest between reps</span>
+            <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <span className="font-bold">Rest between reps</span>
               <div className="flex gap-2">
                 {GAP_OPTIONS.map(g => (
                   <button
@@ -317,8 +317,8 @@ export function TempoPageClient() {
                     aria-pressed={g === gap}
                     onClick={() => update({ gap: g })}
                     className={cn(
-                      'w-12 py-2 rounded-lg text-sm font-medium transition-colors',
-                      g === gap ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
+                      'numeral h-10 w-12 rounded-lg text-sm transition-colors',
+                      g === gap ? 'bg-primary text-primary-foreground' : 'border bg-card text-foreground'
                     )}
                   >
                     {g}s
@@ -328,8 +328,8 @@ export function TempoPageClient() {
             </div>
           </>
         )}
-        <div className="px-5 py-4 flex items-center justify-between gap-4">
-          <label htmlFor="tempo-volume" className="text-sm">Volume</label>
+        <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+          <label htmlFor="tempo-volume" className="font-bold">Volume</label>
           <input
             id="tempo-volume"
             type="range"
@@ -343,7 +343,7 @@ export function TempoPageClient() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-center text-xs text-muted-foreground">
         No sound on iPhone? Turn off silent mode and turn the volume up.
       </p>
     </div>
@@ -362,15 +362,15 @@ function Segmented<T extends string>({
   onChange: (value: T) => void
 }) {
   return (
-    <div role="group" aria-label={label} className="flex rounded-lg bg-secondary p-1 gap-1">
+    <div role="group" aria-label={label} className="flex gap-1 rounded-lg bg-muted p-1">
       {options.map(o => (
         <button
           key={o.value}
           aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
           className={cn(
-            'flex-1 rounded-md py-2 text-sm font-medium transition-colors',
-            o.value === value ? 'bg-background text-foreground' : 'text-muted-foreground'
+            'h-10 flex-1 rounded-md text-sm font-bold transition-colors',
+            o.value === value ? 'bg-card text-foreground shadow-sm dark:bg-accent' : 'text-muted-foreground'
           )}
         >
           {o.label}

@@ -24,6 +24,7 @@ Defined in `lib/tempo.ts` (pure, unit-tested in `lib/__tests__/tempo.test.ts`).
 
 ## Layout
 
+- Styled with the Range Card tokens (`features/shared.md`): preset and BPM in Archivo wide numerals, condensed labels
 - **Shot type** segmented control: Putting / Chipping / Full swing
 - **Putting cue** segmented control (putting only): 3-tone / Metronome
 - **Visual card**
@@ -31,10 +32,11 @@ Defined in `lib/tempo.ts` (pure, unit-tested in `lib/__tests__/tempo.test.ts`).
   - **Swing dial** (`components/tempo/swing-dial.tsx`): a ring with a face-on golfer silhouette in the middle
     - Ring is laid out like the swing — Start · Impact at 6 o'clock, Top at 12, with a tick at each
     - Backswing fills the left half (6 → 12, arriving on the top tone); downswing fills the right half (12 → 6, closing the circle on the impact tone). The right half fills 2× / 3× faster, showing the ratio
+    - Ring colours: track muted, fill fairway, rest rough; impact turns the ring flag yellow with a glow
     - Impact: full ring glows briefly
     - Rest: the full ring turns muted and unwinds to empty as the next rep approaches; same during the lead-in after Start. 3-tone shows a "Next rep in N.Ns" countdown underneath; metronome unwinds over its one-beat rest with no countdown
     - Empty when stopped and after the rep when Repeat is off
-    - Golfer: video frames from a sprite sheet per shot type, drawn on a `<canvas>` over the ring and tinted with the theme's foreground colour. The dial loads only the selected shot type's sheet. `spriteFrame()` in `lib/tempo.ts` picks the frame from the same clock as the ring: backswing frames spread over the backswing, **Top** on the top tone, downswing frames over the downswing, **Impact** on the impact tone, the follow-through over `throughSeconds`, the finish held until `resetAt`, then Setup for the remainder of the rest
+    - Golfer: video frames from a sprite sheet per shot type, drawn on a `<canvas>` over the ring and tinted with the theme's foreground colour (ink in light, chalk in dark). The dial loads only the selected shot type's sheet. `spriteFrame()` in `lib/tempo.ts` picks the frame from the same clock as the ring: backswing frames spread over the backswing, **Top** on the top tone, downswing frames over the downswing, **Impact** on the impact tone, the follow-through over `throughSeconds`, the finish held until `resetAt`, then Setup for the remainder of the rest
       - The ball is part of the video: it sits at the club at setup and leaves after impact, out of the picture at the frame's edge
       - Every shot type uses one shared size and the same foot position, so the golfer never changes size or jumps when switching shot type. The size is the largest at which every frame of every shot stays inside the ring; the full swing's driver (straight up overhead, wrapped high at the finish) sets it, at 79% of the earlier traced-golfer size
       - **How the frames are made** (sources in `scripts/assets/<shot>/`, built by `scripts/build-swing-sprite.py` into `public/tempo/<shot>.webp` + `components/tempo/swing-sprites.ts`)

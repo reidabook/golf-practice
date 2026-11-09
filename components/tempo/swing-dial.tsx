@@ -114,7 +114,7 @@ export function SwingDial({
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-xs text-muted-foreground">Top</span>
+      <span className="label">Top</span>
       <div className="relative w-64 h-64">
         <svg viewBox="0 0 200 200" className="w-64 h-64" role="img" aria-label="Swing tempo dial">
           <circle cx="100" cy="100" r="88" fill="none" strokeWidth="8" className="stroke-muted" />
@@ -131,19 +131,19 @@ export function SwingDial({
             pathLength={1}
             strokeDasharray="1"
             transform="rotate(90 100 100)"
-            className="stroke-primary data-[phase=rest]:stroke-muted-foreground data-[phase=impact]:[filter:drop-shadow(0_0_6px_hsl(var(--primary)))]"
+            className="stroke-fairway data-[phase=impact]:stroke-flag data-[phase=rest]:stroke-rough/60 data-[phase=impact]:[filter:drop-shadow(0_0_8px_hsl(var(--flag)))]"
             style={{ strokeDashoffset: 1, opacity: 0 }}
           />
           {/* Top and Start · Impact ticks */}
-          <line x1="100" y1="4" x2="100" y2="20" strokeWidth="2" className="stroke-muted-foreground" />
-          <line x1="100" y1="180" x2="100" y2="196" strokeWidth="2" className="stroke-muted-foreground" />
+          <line x1="100" y1="4" x2="100" y2="20" strokeWidth="2" className="stroke-rough" />
+          <line x1="100" y1="180" x2="100" y2="196" strokeWidth="2" className="stroke-rough" />
         </svg>
         {/* Golfer (video frames, ball included), drawn over the dial in the same 200×200 space */}
         <canvas ref={canvasRef} aria-hidden className="absolute inset-0 w-full h-full text-foreground" />
       </div>
-      <span className="text-xs text-muted-foreground">Start · Impact</span>
+      <span className="label">Start · Impact</span>
       {showCountdown && (
-        <p ref={labelRef} className="h-4 text-xs text-muted-foreground font-mono tabular-nums" />
+        <p ref={labelRef} className="label h-4 normal-case tracking-normal tabular-nums" />
       )}
     </div>
   )
