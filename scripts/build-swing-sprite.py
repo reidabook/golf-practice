@@ -34,11 +34,11 @@ OUT = ROOT / 'components/tempo/swing-sprites.ts'
 SHOTS = {
     'full': dict(
         phases={
-            # back: standing still before 12; reaches Top at 50, then carries on into a whole extra swing.
+            # back: club at the ball until 4 (later starts would begin with the club behind the trail leg); reaches Top at 50, then carries on into a whole extra swing.
             # down and through are one continuous stretch of clip-down: holding at Top before 14, impact at 41,
             # then it carries on into a follow-through that reaches the finish at 72 (no separate clip needed).
             # 42 is skipped: the club is hidden behind the leg there
-            'back': ('clip-back.mp4', 12, 50, 48, 4),
+            'back': ('clip-back.mp4', 4, 50, 48, 4),
             'down': ('clip-down.mp4', 14, 41, 24, 1),
             'through': ('clip-down.mp4', 41, 72, 30, 1, dict(skip=(42,))),
         },
