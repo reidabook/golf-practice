@@ -1,5 +1,7 @@
 # Redesign — "Range Card"
 
+> **Status:** built on branch `redesign/range-card` (2026-11-09). Feature behaviour now lives in `features/today.md`, `library.md`, `progress.md`, `drills.md`, `tempo.md`, `shared.md`; this file keeps the design rationale.
+>
 > **For Claude:** Parent spec for the UX/visual redesign. Each sub-issue implements one slice and updates the affected `features/*.md` in the same commit. Decisions below were settled with Reid on 2026-11-09 — don't reopen them without asking.
 
 ---

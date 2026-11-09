@@ -9,6 +9,6 @@ Detailed feature specs live in `features/`. Read the relevant file(s) before mak
 | `features/library.md` | Library tab — drills (+ ad-hoc log), blocks (templates, start), guides |
 | `features/drills.md` | Drill scoring — drill list, single drill scorer, completion |
 | `features/tempo.md` | Tempo tab — tempo trainer for putting, chipping, full swing |
-| `features/redesign/spec.md` | Range Card redesign — 4-tab IA, tokens, scorecard strip (in progress, tracked in GitHub issues) |
+| `features/redesign/spec.md` | Range Card redesign — 4-tab IA, tokens, scorecard strip (design rationale; built) |
 | `features/play-mode/spec.md` | Play Mode — on-course round tracker (hidden from nav) |
 | `features/shared.md` | Navigation, data/business logic, UI patterns (cross-cutting) |
