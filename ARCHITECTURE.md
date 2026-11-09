@@ -33,6 +33,7 @@ Dynamic route pages (`[blockId]`, `[drillId]`) are exempt.
   - Full page loads (app launch/reload) → stale-while-revalidate: cached page shows instantly, cache refreshes in the background
   - API routes, in-app RSC navigations and POSTs → network only (not intercepted)
   - Bump `CACHE_NAME` when changing caching behaviour
+  - Production only: in development `SwRegister` unregisters any worker and clears its caches (dev chunk URLs aren't hashed, so cache-first serves stale code)
 - `SwRegister` calls `router.refresh()` on launch when a service worker controls the page, so a cached page catches up with fresh data.
 - `components/scoring/drill-route-watcher.tsx` restores the open drill scorer after iOS kills the app (see `features/shared.md` → App relaunch).
 
