@@ -22,8 +22,8 @@ interface TodayClientProps {
 }
 
 export function TodayClient({ block, drills, dateLabel }: TodayClientProps) {
-  const upNext = drills.filter((d) => !d.done_today)
-  const doneToday = drills.filter((d) => d.done_today)
+  const upNext = drills.filter((d) => !d.done_today && !d.skipped_today)
+  const doneToday = drills.filter((d) => d.done_today || d.skipped_today)
   const next = upNext[0] ?? null
   const minSessions = drills.length ? Math.min(...drills.map((d) => d.session_count)) : 0
   // Today's session = the one the least-played drill is on
@@ -62,7 +62,7 @@ export function TodayClient({ block, drills, dateLabel }: TodayClientProps) {
 
         {upNext.length === 0 && drills.length > 0 && (
           <div className="rounded-lg border border-fairway/30 bg-fairway/[0.07] px-4 py-4">
-            <p className="font-bold">All {drills.length} drills scored today</p>
+            <p className="font-bold">All {drills.length} drills done today</p>
             <p className="text-sm text-muted-foreground">Tap any drill to score it again. Extra scores show in Progress.</p>
           </div>
         )}
@@ -136,10 +136,11 @@ function DrillRow({ item, block, isNext }: { item: BlockDrillItem; block: Traini
 function DoneRow({ item, blockId }: { item: BlockDrillItem; blockId: string }) {
   return (
     <Link href={`/blocks/${blockId}/drills/${item.drill.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors active:bg-accent">
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fairway text-primary-foreground">
-        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+      <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full', item.done_today ? 'bg-fairway text-primary-foreground' : 'border-2 border-dashed border-input')}>
+        {item.done_today && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
       </span>
       <span className="min-w-0 flex-1 truncate font-bold text-muted-foreground">{item.drill.name}</span>
+      {!item.done_today && <span className="label">Skipped</span>}
       {item.today_score !== null && (
         <span className="numeral text-lg">
           {item.today_score}

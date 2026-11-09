@@ -19,5 +19,5 @@ export default async function DrillScoringPage({ params }: Props) {
   const drillItem = drills.find((d) => d.drill.id === drillId)
   if (!drillItem) notFound()
 
-  return <DrillScoringClient block={block} drillItem={drillItem} blockId={blockId} />
+  return <DrillScoringClient key={drillId} block={block} drillItem={drillItem} drills={drills} blockId={blockId} />
 }

@@ -17,6 +17,9 @@ export async function getBlockDrills(blockId: string): Promise<BlockDrillItem[]>
     .sort((a, b) => Number(a.sort_order) - Number(b.sort_order))
   const blockLogs = logRows.filter(r => r.block_id === blockId && !parseBoolStr(r.skipped) && r.score !== '')
   const todayStr = today()
+  const skippedToday = new Set(
+    logRows.filter(r => r.block_id === blockId && parseBoolStr(r.skipped) && r.log_date === todayStr).map(r => r.drill_id)
+  )
 
   return templateDrills
     .map(btd => {
@@ -35,6 +38,7 @@ export async function getBlockDrills(blockId: string): Promise<BlockDrillItem[]>
         last_log_date: lastLog ? lastLog.log_date : null,
         scores: drillLogs.map(l => Number(l.score)).reverse(),
         today_score: todayLog ? Number(todayLog.score) : null,
+        skipped_today: !todayLog && skippedToday.has(btd.drill_id),
       } satisfies BlockDrillItem
     })
     .filter((x): x is BlockDrillItem => x !== null)

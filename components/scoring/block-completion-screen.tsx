@@ -37,22 +37,20 @@ export function BlockCompletionScreen({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-background px-6">
-      <div className="flex flex-col items-center gap-5 text-center max-w-sm w-full">
-        <span className="text-6xl">🏆</span>
-
+    <div className="fixed inset-0 z-[70] flex flex-col bg-background px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(3rem,env(safe-area-inset-top))]">
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-6">
         <div>
-          <h2 className="text-2xl font-bold">Block Complete!</h2>
-          <p className="text-muted-foreground mt-1">{blockName}</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            All drills completed across {targetSessions} session{targetSessions !== 1 ? 's' : ''}. What would you like to do?
+          <p className="label mb-2 text-fairway">Target reached</p>
+          <h2 className="screen-title text-[28px]">{blockName}</h2>
+          <p className="mt-3 text-[15px] text-muted-foreground">
+            Every drill has {targetSessions} session{targetSessions !== 1 ? 's' : ''} logged. Finish the block, add more sessions, or keep scoring without changing anything.
           </p>
         </div>
 
         {view === 'extend' ? (
           <div className="w-full space-y-3">
             <div className="space-y-1.5 text-left">
-              <Label htmlFor="extra-sessions">Additional sessions to add</Label>
+              <Label htmlFor="extra-sessions">Sessions to add</Label>
               <Input
                 id="extra-sessions"
                 type="number"
@@ -70,9 +68,9 @@ export function BlockCompletionScreen({
             </Button>
           </div>
         ) : (
-          <div className="w-full space-y-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
+          <div className="w-full space-y-2">
             <Button onClick={handleComplete} disabled={saving} className="w-full" size="lg">
-              {saving ? 'Saving…' : 'Complete Block'}
+              {saving ? 'Saving…' : 'Complete block'}
             </Button>
             <Button
               variant="outline"
@@ -81,7 +79,7 @@ export function BlockCompletionScreen({
               className="w-full"
               size="lg"
             >
-              Extend Block
+              Add sessions
             </Button>
             <Button
               variant="ghost"
@@ -90,7 +88,7 @@ export function BlockCompletionScreen({
               className="w-full"
               size="lg"
             >
-              Keep Going
+              Keep going
             </Button>
           </div>
         )}

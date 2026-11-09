@@ -49,7 +49,7 @@
 
 ### Drill Scoring
 - **Save score**: records score for a drill within the active block
-- **Skip drill**: marks drill as skipped (no score) for today
+- **Skip drill**: marks drill as skipped (no score) for today; `getBlockDrills()` returns `skipped_today` so Today moves it out of Up next
 - **Ad-hoc logging**: log a score for any drill outside a block — appears in Progress charts only (`block_id` stored as empty string)
 - **Score bounds**: enforced by +/− buttons and numpad clamp; buttons disabled at limits; default starting value is always `max(0, min_score)`
 - **Session tracking**: `getBlockDrills()` returns `session_count` per drill (total non-skipped logs in block)

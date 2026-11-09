@@ -66,6 +66,7 @@ export interface BlockDrillItem {
   last_log_date: string | null
   scores: number[]         // non-skipped scores in this block, oldest first (scorecard strip)
   today_score: number | null  // most recent score logged today, if any
+  skipped_today: boolean   // skipped today and not scored since
 }
 
 export interface DrillComparison {

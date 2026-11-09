@@ -30,6 +30,7 @@ export async function saveDrillLog(
   revalidatePath(`/blocks/${blockId}/drills/${drillId}`)
   invalidateSheetCache()
   revalidatePath('/progress')
+  revalidatePath('/')
 
   const [comparison, blockComplete] = await Promise.all([
     getDrillComparison(blockId, drillId, score),
@@ -62,6 +63,7 @@ export async function skipDrillLog(blockId: string, drillId: string): Promise<vo
   })
   invalidateSheetCache()
   revalidatePath(`/blocks/${blockId}/drills`)
+  revalidatePath('/')
 }
 
 export async function logDrillScore(
@@ -82,4 +84,5 @@ export async function logDrillScore(
   })
   invalidateSheetCache()
   revalidatePath('/progress')
+  revalidatePath('/')
 }

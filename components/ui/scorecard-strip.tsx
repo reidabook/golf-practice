@@ -48,7 +48,7 @@ export function ScorecardStrip({
   return (
     <ol
       className={cn(
-        'inline-grid overflow-hidden rounded-md border border-border bg-card',
+        'inline-grid w-max max-w-full self-start overflow-hidden rounded-md border border-border bg-card',
         className
       )}
       style={{ gridTemplateColumns: `repeat(${count}, minmax(0, ${size === 'sm' ? '1.75rem' : size === 'lg' ? '3rem' : '2.5rem'}))` }}
@@ -111,6 +111,7 @@ function Mark({ kind, animate }: { kind: 'better' | 'worse'; animate: boolean })
           className={cn('fill-none stroke-stripe', animate && 'animate-draw-mark')}
           strokeWidth="2"
           strokeDasharray="1"
+          strokeLinecap="square"
         />
       )}
     </svg>

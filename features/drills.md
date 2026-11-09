@@ -11,39 +11,36 @@ The drill list is Today (`/`) — see `features/today.md`. `/blocks/[blockId]/dr
 
 ## Single Drill Scorer (`/blocks/[blockId]/drills/[drillId]`)
 
-### Layout
-- Back button to drill list
-- Block name (small) above drill name (large)
-- Description and instructions displayed if defined on the drill
-- Last score reference for this drill in this block (if exists)
+### Layout (`components/scoring/scoring-client.tsx`)
+- "← Today" back link; "Drill N of M" label
+- Drill name, then this drill's **scorecard strip** for the block (next box highlighted)
+- **How to play** (collapsible): description, then instructions — lines starting `- ` become numbered steps (`lib/instructions.ts`, unit-tested), other lines are flag-marked notes. Open by default on a drill's first session
+- Save score and Skip sit above the bottom nav
 
-### Score Input
-- Large score display (7xl monospaced font), defaults to 0 (not min_score)
-- Decrease / Increase buttons — disabled at min/max bounds
-- Tap display to open numpad:
-  - Digits 0–9, backspace, minus (for negative scores)
-  - "Done" button to commit entry
-  - Value clamped to min/max on commit
-- Haptic feedback (vibrate API) when hitting min or max bounds
+### Score Input (`components/scoring/score-input.tsx`)
+- 96px wide numeral, unit underneath; number ticks up/down on +/− (no animation with reduced motion)
+- Starts at `max(0, min_score)`
+- 72px − / + buttons — disabled at min/max bounds; haptic buzz when pressed at a bound
+- Tap the number to open the numpad (sheet above the nav): digits, backspace, minus (only when `min_score < 0`), **Done** commits and clamps to min/max
+- "Last time X" under the input when the drill has a previous score in this block
 
 ### Actions
-- **"Save Score"** — logs the score, then shows comparison overlay; if block becomes complete, shows block completion screen after overlay is dismissed
-- **"Skip Drill"** — marks drill as skipped for today, returns to drill list
+- **Save score** — logs the score, then the same screen shows the result (no overlay):
+  - Score drawn in a **circle** (better than last time) or **square** (worse); plain for same/first
+  - "Better than last time (X)" / "Worse than last time (X)" / "Same as last time (X)" / "First score in this block"
+  - Personal best (flag pill when this score is the best)
+  - The scorecard strip gains the new box with its mark drawn in
+  - **Next: [drill] →** opens the next drill still to do today; "Back to Today" link. When nothing is left: "All done today — back to Today"
+- **Skip drill today** — logs a skip and goes to the next drill (or Today). Skipped drills show under Done today with a "Skipped" tag
 
 ### Resume after app is killed
 - Unsaved score is kept as a draft in localStorage and restored when the drill reopens (cleared on save/skip, or if already scored today)
-- If iOS kills the app on this screen or the drill list, relaunching within 3 hours reopens it (`DrillRouteWatcher`, see `features/shared.md` → App relaunch)
+- If iOS kills the app on this screen, relaunching within 3 hours reopens it (`DrillRouteWatcher`, see `features/shared.md` → App relaunch)
 
-### Score Comparison Overlay (shown after Save)
-- Trend indicator with label: ↑ Improved / ↓ Declined / → Same / ★ First Entry
-- Current score in large font + unit
-- Previous score and personal best shown (if not first entry)
-- Back to Drills button (or block completion screen if block just finished)
-
-### Block Completion Screen (shown when block is complete)
-- Shown after the comparison overlay is dismissed if all drills have reached target_sessions
-- Suppressed for the rest of the session if user previously clicked "Keep Going"
-- Three options:
-  - **Complete Block** — marks status `completed`, redirects to history
-  - **Extend Block** — prompts for additional sessions to add to target_sessions, then continues
-  - **Keep Going** — dismisses, block stays active (won't re-trigger this session)
+### Block Completion Screen (`components/scoring/block-completion-screen.tsx`)
+- Shown after saving when every drill has reached `target_sessions`
+- Suppressed for the rest of the session if user previously chose "Keep going"
+- Options:
+  - **Complete block** — marks status `completed`, opens the block in Progress
+  - **Add sessions** — asks how many sessions to add to `target_sessions`, then continues
+  - **Keep going** — dismisses, block stays active (won't re-trigger this session)
