@@ -1,100 +1,62 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { getActiveBlocks } from '@/lib/queries/blocks'
+import { getActiveBlock } from '@/lib/queries/blocks'
+import { getBlockDrills } from '@/lib/queries/drill-logs'
 import { getTemplates } from '@/lib/queries/templates'
-import { startBlock } from '@/lib/actions/blocks'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { formatDate } from '@/lib/utils'
+import { today } from '@/lib/sheets'
+import { PageHeader, SectionLabel } from '@/components/ui/page'
+import { TodayClient } from '@/components/today/today-client'
+import { HomeRoutine } from '@/components/today/home-routine'
+import { StartBlockButton } from '@/components/library/start-block-button'
 
-export default async function Home() {
-  const [activeBlocks, templates] = await Promise.all([getActiveBlocks(), getTemplates()])
+function dateLabel(iso: string) {
+  const d = new Date(`${iso}T12:00:00`)
+  return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })
+}
 
+export default async function TodayPage() {
+  const active = await getActiveBlock()
+  const label = dateLabel(today())
+
+  if (active) {
+    const drills = await getBlockDrills(active.block.id)
+    return <TodayClient block={active.block} drills={drills} dateLabel={label} />
+  }
+
+  const templates = await getTemplates()
   return (
-    <div className="p-4 space-y-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
-      <h1 className="text-2xl font-bold">Golf Practice</h1>
-
-      {/* Active training blocks */}
-      {activeBlocks.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Active</h2>
-          {activeBlocks.map(({ block, completed_drills, total_drills, todays_drill_count }) => {
-            const progressPct = total_drills > 0 ? Math.round((completed_drills / total_drills) * 100) : 0
-            return (
-              <Card key={block.id}>
-                <CardContent className="pt-4 pb-4 space-y-3">
-                  <div>
-                    <p className="font-semibold">{block.name}</p>
-                    <p className="text-xs text-muted-foreground">Started {formatDate(block.started_at)}</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{completed_drills} of {total_drills} drills</span>
-                      <span>{total_drills - completed_drills} remaining</span>
-                    </div>
-                    <Progress value={progressPct} className="h-2" />
-                  </div>
-                  {todays_drill_count > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {todays_drill_count} drill{todays_drill_count !== 1 ? 's' : ''} logged today
+    <div>
+      <PageHeader eyebrow={label} title="No block running" subtitle="Pick a block to start. Its drills show here each day." />
+      <div className="space-y-7 px-4">
+        {templates.length === 0 ? (
+          <p className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
+            You don&apos;t have any blocks yet.{' '}
+            <Link href="/library?tab=blocks" className="font-bold text-fairway underline underline-offset-4">Make one in Library</Link>
+          </p>
+        ) : (
+          <section>
+            <SectionLabel>Blocks</SectionLabel>
+            <div className="divide-y overflow-hidden rounded-lg border bg-card">
+              {templates.map((t) => (
+                <div key={t.id} className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold">{t.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t.target_sessions} sessions · {t.drills?.length ?? 0} drills
                     </p>
-                  )}
-                  <Button asChild className="w-full" size="lg">
-                    <Link href={`/blocks/${block.id}/drills`}>Open Training</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </section>
-      )}
-
-      {/* Template picker — always visible so any template can be started */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Start a Training Block</CardTitle>
-          <CardDescription>Choose a template to begin your program</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {templates.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No templates yet.{' '}
-              <Link href="/drills" className="underline text-primary">
-                Create one in Drills
-              </Link>
-            </p>
-          ) : (
-            templates.map((t) => (
-              <form
-                key={t.id}
-                action={async () => {
-                  'use server'
-                  await startBlock(t.id)
-                }}
-              >
-                <button
-                  type="submit"
-                  className="w-full text-left p-4 rounded-lg border border-border bg-card hover:bg-accent transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{t.name}</p>
-                      {t.description && (
-                        <p className="text-sm text-muted-foreground mt-0.5">{t.description}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">{t.target_sessions} sessions</p>
-                    </div>
-                    {t.is_default && <Badge variant="secondary">Default</Badge>}
                   </div>
-                </button>
-              </form>
-            ))
-          )}
-        </CardContent>
-      </Card>
+                  <StartBlockButton templateId={t.id} templateName={t.name} activeBlockName={null} />
+                </div>
+              ))}
+            </div>
+            <Link href="/library?tab=blocks" className="mt-2 block px-1 text-right text-sm font-bold text-fairway">
+              Manage blocks
+            </Link>
+          </section>
+        )}
+        <HomeRoutine />
+      </div>
     </div>
   )
 }

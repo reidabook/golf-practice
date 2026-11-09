@@ -1,20 +1,6 @@
-import { notFound } from 'next/navigation'
-import { getBlock } from '@/lib/queries/blocks'
-import { getBlockDrills } from '@/lib/queries/drill-logs'
-import { BlockDrillListClient } from '@/components/scoring/drill-list-client'
+import { redirect } from 'next/navigation'
 
-interface Props {
-  params: Promise<{ blockId: string }>
-}
-
-export default async function BlockDrillsPage({ params }: Props) {
-  const { blockId } = await params
-  const [block, drills] = await Promise.all([
-    getBlock(blockId),
-    getBlockDrills(blockId),
-  ])
-
-  if (!block) notFound()
-
-  return <BlockDrillListClient block={block} drills={drills} />
+// The drill list is now Today (/)
+export default function BlockDrillsPage() {
+  redirect('/')
 }

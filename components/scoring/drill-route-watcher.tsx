@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
 const STORAGE_KEY = 'drill-active-route'
-// /blocks/<id>/drills (drill list) and /blocks/<id>/drills/<id> (single drill scorer)
-const DRILL_ROUTE_RE = /^\/blocks\/[^/]+\/drills(\/[^/]+)?$/
+// /blocks/<id>/drills/<id> (single drill scorer). The drill list is Today (/), which the app opens on anyway.
+const DRILL_ROUTE_RE = /^\/blocks\/[^/]+\/drills\/[^/]+$/
 // Only restore if the drill was open recently
 const MAX_AGE_MS = 3 * 60 * 60 * 1000
 
@@ -29,7 +29,7 @@ function readSaved(): SavedRoute | null {
  * Brings the user back to the drill they were on when iOS kills the home-screen
  * app (e.g. after locking the screen mid-drill).
  *
- * - While on a drill list or drill scorer: saves { path, savedAt } to localStorage.
+ * - While on a drill scorer: saves { path, savedAt } to localStorage.
  * - When navigating elsewhere: clears it (deliberate exit = no restore).
  * - On app launch: if the app opens on Home and a drill was open in the last 3h,
  *   navigates straight back to it.

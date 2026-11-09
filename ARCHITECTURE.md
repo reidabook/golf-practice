@@ -34,7 +34,7 @@ Dynamic route pages (`[blockId]`, `[drillId]`) are exempt.
   - API routes, in-app RSC navigations and POSTs → network only (not intercepted)
   - Bump `CACHE_NAME` when changing caching behaviour
 - `SwRegister` calls `router.refresh()` on launch when a service worker controls the page, so a cached page catches up with fresh data.
-- `components/scoring/drill-route-watcher.tsx` restores the open drill after iOS kills the app (see `features/shared.md` → App relaunch).
+- `components/scoring/drill-route-watcher.tsx` restores the open drill scorer after iOS kills the app (see `features/shared.md` → App relaunch).
 
 ---
 
@@ -100,10 +100,10 @@ Every cell value is a string. Parse on read: `Number(r.score)`, `parseBool(r.is_
 
 | Path | File | Notes |
 |---|---|---|
-| `/` | `app/page.tsx` | Active block card, start/continue day CTA |
+| `/` | `app/page.tsx` | Today — running block's drills (`components/today/today-client.tsx`), or block picker |
 | `/history` | — | Redirects to `/progress#blocks` (`next.config.ts`) |
 | `/history/:blockId` | `app/history/[blockId]/page.tsx` | Block detail + per-drill progress |
-| `/blocks/:blockId/drills` | `app/blocks/[blockId]/drills/page.tsx` | Drill scoring wizard for today |
+| `/blocks/:blockId/drills` | `app/blocks/[blockId]/drills/page.tsx` | Redirects to `/` |
 | `/blocks/:blockId/drills/:drillId` | `app/blocks/[blockId]/drills/[drillId]/page.tsx` | Single drill full-screen scorer |
 | `/progress` | `app/progress/page.tsx` | All-time line charts per drill |
 | `/library` | `app/library/page.tsx` | Drills · Blocks · Guides (`components/library/library-client.tsx`) |

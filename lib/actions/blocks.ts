@@ -31,7 +31,7 @@ export async function startBlock(templateId: string): Promise<void> {
 
   invalidateSheetCache()
   revalidatePath('/')
-  redirect(`/blocks/${blockId}/drills`)
+  redirect('/')
 }
 
 export async function completeBlock(blockId: string): Promise<void> {
@@ -75,7 +75,7 @@ export async function extendBlock(blockId: string, additionalSessions: number): 
   invalidateSheetCache()
   revalidatePath('/')
   invalidateSheetCache()
-  revalidatePath(`/blocks/${blockId}/drills`)
+  revalidatePath(`/blocks/${blockId}/drills`, 'layout')
 }
 
 export async function deleteBlock(blockId: string): Promise<void> {

@@ -17,7 +17,7 @@
 
 ### App relaunch (home-screen app)
 - App opens instantly from the service worker's cached page, then refreshes data in the background (`router.refresh()` on launch)
-- If iOS kills the app while a drill list or drill scorer is open (e.g. screen locked), relaunching within 3 hours returns to that same screen; the unsaved score on the drill scorer is restored from its draft
+- If iOS kills the app while a drill scorer is open (e.g. screen locked), relaunching within 3 hours returns to that same screen (the drill list is Today, which the app opens on anyway); the unsaved score on the drill scorer is restored from its draft
 - Navigating away from a drill screen on purpose clears the saved route — no restore
 
 ---
@@ -33,11 +33,11 @@
 - **Start block** from a template — creates a new row in `training-blocks` tab with a copy of the template name
 - **Block name display**: uses the current template name if the template still exists (loaded from `block-templates` tab and matched in JS), so renaming a template is reflected on active blocks
 - **Block status**: `active`, `completed`, `ended_early`
-  - Active blocks appear on the home tab
+  - The active block's drills are the Today tab
   - Completed and ended-early blocks appear only in history with their correct status label
 - **Block deletion**: removes block row + all associated drill log rows (cascaded manually in `deleteBlock` action)
-- **Block completion**: automatic when every drill reaches `target_sessions` → shows completion screen; or manually via "Mark Complete"
-- **End early**: sets status to `ended_early` via the drill list's End Early button; block moves to history
+- **Block completion**: automatic when every drill reaches `target_sessions` → shows completion screen; or manually via Today's ⋯ menu → Mark complete
+- **End early**: sets status to `ended_early` from Today's ⋯ menu; block moves to Progress → Past blocks
 - **One active block at a time**: `startBlock` ends any active block early before starting the new one; the UI confirms first
 
 ### Sessions model

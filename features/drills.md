@@ -5,16 +5,9 @@
 
 ---
 
-## Drill Scoring Wizard (`/blocks/[blockId]/drills`)
+## Drill list
 
-- Block name header
-- Two sections: "Up Next" (not yet scored today) and "Done Today"
-- Per-drill row: name, unit, last score, session progress (`X/Y sessions`), and badges:
-  - If drill has reached target_sessions: green ✓ Complete badge (row slightly muted)
-  - Otherwise: scoring direction badge + "Today" badge if done_today
-- Drills that reached target_sessions are still tappable — extra completions don't count toward block target
-- Bottom action bar: **Mark Complete**, **End Early** (with confirmation), **Delete** (with confirmation)
-  - **End Early** sets status to `ended_early`, removes block from active list, keeps drill logs
+The drill list is Today (`/`) — see `features/today.md`. `/blocks/[blockId]/drills` redirects there.
 
 ## Single Drill Scorer (`/blocks/[blockId]/drills/[drillId]`)
 

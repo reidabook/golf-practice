@@ -4,7 +4,7 @@ Detailed feature specs live in `features/`. Read the relevant file(s) before mak
 
 | File | Covers |
 |---|---|
-| `features/home.md` | Home tab — template selection, active block view |
+| `features/today.md` | Today tab — running block's drills, scorecard strips, block menu, home routine |
 | `features/history.md` | History tab — block list, block detail, completion summary |
 | `features/progress.md` | Progress tab — per-drill charts, trend line |
 | `features/library.md` | Library tab — drills (+ ad-hoc log), blocks (templates, start), guides |
