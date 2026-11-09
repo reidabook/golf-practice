@@ -25,12 +25,18 @@ async function fetchBlockInfo(
 
 const parseBoolStr = (v: string) => v.toLowerCase() === 'true'
 
+// Blocks show their template's current name, so renaming a template renames its blocks.
+// Falls back to the name copied onto the block row when the template was deleted.
+function withTemplateName(r: Record<string, string>, templateRows: Record<string, string>[]): Record<string, string> {
+  const tmplName = r.template_id ? templateRows.find(t => t.id === r.template_id)?.name : undefined
+  return tmplName ? { ...r, name: tmplName } : r
+}
+
 export async function getActiveBlocks(): Promise<ActiveBlockInfo[]> {
   const [blockRows, templateRows, btdRows, logRows] = await Promise.all([
     getCachedRows('training_blocks'), getCachedRows('block_templates'),
     getCachedRows('block_template_drills'), getCachedRows('drill_logs'),
   ])
-  const templateMap = new Map(templateRows.map(r => [r.id, r]))
   const templateDrillCounts = new Map<string, number>()
   for (const btd of btdRows) {
     templateDrillCounts.set(btd.template_id, (templateDrillCounts.get(btd.template_id) ?? 0) + 1)
@@ -38,7 +44,7 @@ export async function getActiveBlocks(): Promise<ActiveBlockInfo[]> {
   const activeBlocks = blockRows
     .filter(r => r.status === 'active')
     .sort((a, b) => b.started_at.localeCompare(a.started_at))
-    .map(r => rowToBlock({ ...r, name: (r.template_id ? templateMap.get(r.template_id)?.name : undefined) ?? r.name }))
+    .map(r => rowToBlock(withTemplateName(r, templateRows)))
   return Promise.all(activeBlocks.map(b => fetchBlockInfo(b, logRows, templateDrillCounts)))
 }
 
@@ -47,8 +53,8 @@ export async function getActiveBlock(): Promise<ActiveBlockInfo | null> {
 }
 
 export async function getBlocks(): Promise<TrainingBlock[]> {
-  const rows = await getCachedRows('training_blocks')
-  return rows.map(rowToBlock).sort((a, b) => b.started_at.localeCompare(a.started_at))
+  const [rows, templateRows] = await Promise.all([getCachedRows('training_blocks'), getCachedRows('block_templates')])
+  return rows.map(r => rowToBlock(withTemplateName(r, templateRows))).sort((a, b) => b.started_at.localeCompare(a.started_at))
 }
 
 export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
@@ -60,7 +66,7 @@ export async function getBlock(id: string): Promise<BlockWithDayLogs | null> {
   if (!blockRaw) return null
   const tmplRaw = blockRaw.template_id ? templateRows.find(r => r.id === blockRaw.template_id) : null
   const block: BlockWithDayLogs = {
-    ...rowToBlock(blockRaw),
+    ...rowToBlock(withTemplateName(blockRaw, templateRows)),
     template: tmplRaw ? {
       id: tmplRaw.id, name: tmplRaw.name, description: nullStr(tmplRaw.description),
       target_sessions: Number(tmplRaw.target_sessions), is_default: parseBoolStr(tmplRaw.is_default),
