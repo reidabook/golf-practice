@@ -63,17 +63,17 @@ export function TemplateForm({ template, drills, onSave, onClose, isPending }: T
 
   return (
     <div className="fixed inset-0 z-[60] bg-ink/50 flex items-end justify-center overflow-hidden">
-      <div className="bg-background w-full max-w-lg rounded-t-2xl border-t border-border max-h-[90vh] overflow-y-auto overscroll-contain">
+      <div className="bg-card w-full max-w-lg rounded-t-2xl border-t border-border max-h-[90vh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-          <h2 className="font-semibold">{template ? 'Edit Template' : 'New Template'}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-accent">
+          <h2 className="font-display text-lg font-bold">{template ? 'Edit block' : 'New block'}</h2>
+          <button onClick={onClose} aria-label="Close" className="-mr-2 flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="t-name">Template Name</Label>
+            <Label htmlFor="t-name">Name</Label>
             <Input id="t-name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
 
@@ -83,7 +83,7 @@ export function TemplateForm({ template, drills, onSave, onClose, isPending }: T
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="t-count">Number of Sessions</Label>
+            <Label htmlFor="t-count">Sessions</Label>
             <Input
               id="t-count"
               type="number"
@@ -129,7 +129,7 @@ export function TemplateForm({ template, drills, onSave, onClose, isPending }: T
           {/* Available drills to add */}
           {unselectedDrills.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-muted-foreground">Add Drills</Label>
+              <Label className="text-muted-foreground">Add drills</Label>
               <div className="space-y-1">
                 {unselectedDrills.map((d) => (
                   <button
@@ -151,7 +151,7 @@ export function TemplateForm({ template, drills, onSave, onClose, isPending }: T
               Cancel
             </Button>
             <Button type="submit" disabled={isPending || selectedIds.length === 0} className="flex-1">
-              {isPending ? 'Saving...' : 'Save Template'}
+              {isPending ? 'Saving…' : 'Save block'}
             </Button>
           </div>
         </form>

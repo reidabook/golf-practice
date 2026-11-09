@@ -48,10 +48,10 @@ export function DrillForm({ drill, onSave, onClose, isPending }: DrillFormProps)
 
   return (
     <div className="fixed inset-0 z-[60] bg-ink/50 flex items-end justify-center overflow-hidden">
-      <div className="bg-background w-full max-w-lg rounded-t-2xl border-t border-border max-h-[90vh] overflow-y-auto overscroll-contain">
+      <div className="bg-card w-full max-w-lg rounded-t-2xl border-t border-border max-h-[90vh] overflow-y-auto overscroll-contain">
         <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-          <h2 className="font-semibold">{drill ? 'Edit Drill' : 'New Drill'}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-accent">
+          <h2 className="font-display text-lg font-bold">{drill ? 'Edit drill' : 'New drill'}</h2>
+          <button onClick={onClose} aria-label="Close" className="-mr-2 flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -80,7 +80,7 @@ export function DrillForm({ drill, onSave, onClose, isPending }: DrillFormProps)
           </div>
 
           <div className="space-y-1.5">
-            <Label>Scoring Direction</Label>
+            <Label>Scoring direction</Label>
             <div className="flex gap-3">
               {(['higher_better', 'lower_better'] as const).map((d) => (
                 <button
@@ -105,11 +105,11 @@ export function DrillForm({ drill, onSave, onClose, isPending }: DrillFormProps)
               <Input id="d-unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="misses" required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="d-min">Min</Label>
+              <Label htmlFor="d-min">Min score</Label>
               <Input id="d-min" type="number" value={minScore} onChange={(e) => setMinScore(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="d-max">Max</Label>
+              <Label htmlFor="d-max">Max score</Label>
               <Input id="d-max" type="number" value={maxScore} onChange={(e) => setMaxScore(e.target.value)} placeholder="none" />
             </div>
           </div>
@@ -119,7 +119,7 @@ export function DrillForm({ drill, onSave, onClose, isPending }: DrillFormProps)
               Cancel
             </Button>
             <Button type="submit" disabled={isPending} className="flex-1">
-              {isPending ? 'Saving...' : 'Save Drill'}
+              {isPending ? 'Saving…' : 'Save drill'}
             </Button>
           </div>
         </form>

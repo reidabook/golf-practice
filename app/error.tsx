@@ -15,11 +15,13 @@ export default function Error({
   }, [error])
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
-      <p className="text-4xl mb-4">⛳</p>
-      <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
-      <p className="text-muted-foreground mb-6 text-sm">{error.message}</p>
-      <Button onClick={reset}>Try again</Button>
+    <div className="flex min-h-[60vh] flex-col justify-center px-6">
+      <p className="label mb-2 text-stripe">Couldn&apos;t load this screen</p>
+      <h2 className="screen-title mb-2">The practice sheet didn&apos;t respond</h2>
+      <p className="mb-6 text-sm text-muted-foreground">
+        Check your connection and try again. If it keeps happening, the error was: {error.message}
+      </p>
+      <Button onClick={reset} size="lg">Try again</Button>
     </div>
   )
 }
