@@ -26,3 +26,17 @@ After every change — no exceptions — update whichever of these are affected:
 - `features/*.md` — if any feature's behaviour, layout, or data flow changes
 
 Documentation updates must be included in the same commit as the code change. Never leave docs stale.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `reidabook/golf-practice` via `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `GLOSSARY.md` + `docs/adr/`. See `docs/agents/domain.md`.
